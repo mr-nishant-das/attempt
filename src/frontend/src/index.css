@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: "Satoshi", sans-serif;
+    --font-body: "Plus Jakarta Sans", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    --radius: 0.625rem;
+
+    --background: 0.98 0.01 60;
+    --foreground: 0.12 0.02 40;
+    --card: 1.0 0 0;
+    --card-foreground: 0.12 0.02 40;
+    --popover: 1.0 0 0;
+    --popover-foreground: 0.12 0.02 40;
+
+    --primary: 0.68 0.24 55;
+    --primary-foreground: 0.98 0 0;
+
+    --secondary: 0.4 0.15 155;
+    --secondary-foreground: 0.98 0 0;
+    --muted: 0.92 0.02 50;
+    --muted-foreground: 0.45 0.01 50;
+
+    --accent: 0.75 0.18 65;
+    --accent-foreground: 0.12 0.02 40;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.94 0.02 55;
+    --input: 0.96 0.01 60;
+    --ring: 0.68 0.24 55;
+
+    --chart-1: 0.68 0.24 55;
+    --chart-2: 0.4 0.15 155;
+    --chart-3: 0.75 0.18 65;
+    --chart-4: 0.6 0.1 35;
+    --chart-5: 0.55 0.12 20;
+
+    --sidebar: 0.98 0.01 60;
+    --sidebar-foreground: 0.12 0.02 40;
+    --sidebar-primary: 0.68 0.24 55;
+    --sidebar-primary-foreground: 0.98 0 0;
+    --sidebar-accent: 0.75 0.18 65;
+    --sidebar-accent-foreground: 0.12 0.02 40;
+    --sidebar-border: 0.94 0.02 55;
+    --sidebar-ring: 0.68 0.24 55;
+  }
+
+  .dark {
+    --background: 0.18 0.05 155;
+    --foreground: 0.95 0.02 50;
+    --card: 0.22 0.04 155;
+    --card-foreground: 0.95 0.02 50;
+    --popover: 0.26 0.04 155;
+    --popover-foreground: 0.95 0.02 50;
+
+    --primary: 0.72 0.2 55;
+    --primary-foreground: 0.18 0.05 155;
+
+    --secondary: 0.65 0.12 155;
+    --secondary-foreground: 0.95 0.02 50;
+    --muted: 0.28 0.03 155;
+    --muted-foreground: 0.65 0.02 50;
+
+    --accent: 0.78 0.15 65;
+    --accent-foreground: 0.18 0.05 155;
+
+    --destructive: 0.65 0.19 22;
+    --destructive-foreground: 0.95 0.02 50;
+
+    --border: 0.32 0.04 155;
+    --input: 0.32 0.04 155;
+    --ring: 0.72 0.2 55;
+
+    --chart-1: 0.72 0.2 55;
+    --chart-2: 0.65 0.12 155;
+    --chart-3: 0.78 0.15 65;
+    --chart-4: 0.68 0.1 35;
+    --chart-5: 0.62 0.12 20;
+
+    --sidebar: 0.22 0.04 155;
+    --sidebar-foreground: 0.95 0.02 50;
+    --sidebar-primary: 0.72 0.2 55;
+    --sidebar-primary-foreground: 0.18 0.05 155;
+    --sidebar-accent: 0.78 0.15 65;
+    --sidebar-accent-foreground: 0.18 0.05 155;
+    --sidebar-border: 0.32 0.04 155;
+    --sidebar-ring: 0.72 0.2 55;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .text-accent-warm {
+    @apply text-accent font-display text-lg font-semibold;
+  }
+
+  .badge-verified {
+    @apply inline-flex items-center gap-1 px-2 py-1 bg-accent/10 text-accent rounded-full text-xs font-semibold;
+  }
+
+  .card-product {
+    @apply bg-card rounded-lg border border-border shadow-xs transition-smooth hover:shadow-md;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-smooth hover:opacity-90 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-semibold transition-smooth hover:opacity-90;
+  }
+
+  .search-input {
+    @apply bg-input border-2 border-border rounded-lg px-4 py-2 text-foreground placeholder-muted-foreground transition-smooth focus:outline-none focus:border-primary;
+  }
+
+  .sticky-header {
+    @apply sticky top-0 z-40 bg-background backdrop-blur-md border-b border-border;
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center gap-1 text-xs font-medium transition-smooth;
+  }
+
+  .bottom-nav-item-active {
+    @apply text-primary;
+  }
+
+  .category-tile {
+    @apply flex flex-col items-center justify-center gap-2 p-4 bg-muted rounded-lg transition-smooth hover:bg-muted/80;
+  }
+}

@@ -1,0 +1,190 @@
+type UserProfilePublic = 
+ record {
+   addresses: vec Address;
+   createdAt: int;
+   email: text;
+   id: UserId;
+   isAdmin: bool;
+   name: text;
+   phone: text;
+   updatedAt: int;
+ };
+type UserProfileInput = 
+ record {
+   email: text;
+   name: text;
+   phone: text;
+ };
+type UserId = principal;
+type ShipmentUpdate = 
+ record {
+   message: text;
+   status: OrderStatus;
+   timestamp: int;
+ };
+type ProductListResult = 
+ record {
+   products: vec Product;
+   total: nat;
+ };
+type ProductInput = 
+ record {
+   brand: text;
+   category: CategoryId;
+   description: text;
+   discountPercent: nat;
+   imageUrls: vec text;
+   price: nat;
+   rating: nat;
+   reviewCount: nat;
+   stock: nat;
+   subCategory: text;
+   tags: vec text;
+   title: text;
+ };
+type ProductId = nat;
+type ProductFilter = 
+ record {
+   categoryId: opt CategoryId;
+   inStockOnly: bool;
+   limit: nat;
+   maxPrice: opt nat;
+   minPrice: opt nat;
+   offset: nat;
+   searchTerm: opt text;
+ };
+type Product = 
+ record {
+   brand: text;
+   category: CategoryId;
+   createdAt: int;
+   description: text;
+   discountPercent: nat;
+   id: ProductId;
+   imageUrls: vec text;
+   isActive: bool;
+   price: nat;
+   rating: nat;
+   reviewCount: nat;
+   stock: nat;
+   subCategory: text;
+   tags: vec text;
+   title: text;
+   updatedAt: int;
+ };
+type OrderStatus = 
+ variant {
+   Cancelled;
+   Confirmed;
+   Delivered;
+   OutForDelivery;
+   Processing;
+   Shipped;
+ };
+type OrderPublic = 
+ record {
+   createdAt: int;
+   deliveryAddress: DeliveryAddress;
+   estimatedDelivery: opt int;
+   id: OrderId;
+   items: vec OrderItem;
+   shipmentUpdates: vec ShipmentUpdate;
+   status: OrderStatus;
+   totalAmount: nat;
+   updatedAt: int;
+   userId: principal;
+ };
+type OrderItem = 
+ record {
+   discountPercent: nat;
+   imageUrl: text;
+   price: nat;
+   productId: nat;
+   quantity: nat;
+   title: text;
+ };
+type OrderId = nat;
+type DeliveryAddress = 
+ record {
+   city: text;
+   line1: text;
+   line2: text;
+   name: text;
+   phone: text;
+   pincode: text;
+   state: text;
+ };
+type CreateOrderInput = 
+ record {
+   deliveryAddress: DeliveryAddress;
+   items: vec record {
+                productId: nat;
+                quantity: nat;
+              };
+ };
+type CategoryId = nat;
+type Category = 
+ record {
+   description: text;
+   id: CategoryId;
+   imageUrl: text;
+   name: text;
+   slug: text;
+   subCategories: vec text;
+ };
+type CartPublic = 
+ record {
+   items: vec CartItem;
+   updatedAt: int;
+   userId: principal;
+ };
+type CartItem = 
+ record {
+   addedAt: int;
+   productId: nat;
+   quantity: nat;
+ };
+type Address = 
+ record {
+   city: text;
+   isDefault: bool;
+   line1: text;
+   line2: text;
+   name: text;
+   phone: text;
+   pincode: text;
+   state: text;
+ };
+service : {
+  addMyAddress: (address: Address) -> (UserProfilePublic);
+  addToCart: (productId: nat, quantity: nat) -> (CartPublic);
+  adminAddProduct: (input: ProductInput) -> (Product);
+  adminDeleteProduct: (id: ProductId) -> (bool);
+  adminGetAllOrders: (limit: nat, offset: nat) -> (vec OrderPublic) query;
+  adminSetDiscount: (id: ProductId, discountPercent: nat) -> (opt Product);
+  adminSetUserAdmin: (targetUser: principal, adminStatus: bool) -> (bool);
+  adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
+   text) -> (opt OrderPublic);
+  adminUpdateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
+  adminUpdateStock: (id: ProductId, newStock: nat) -> (opt Product);
+  claimAdminIfFirst: () -> (bool);
+  clearMyCart: () -> ();
+  createOrder: (input: CreateOrderInput) -> (OrderPublic);
+  getCategory: (id: CategoryId) -> (opt Category) query;
+  getCategoryBySlug: (slug: text) -> (opt Category) query;
+  getMyCart: () -> (CartPublic);
+  getMyOrders: () -> (vec OrderPublic) query;
+  getMyProfile: () -> (UserProfilePublic);
+  getOrder: (orderId: OrderId) -> (opt OrderPublic) query;
+  getProduct: (id: ProductId) -> (opt Product) query;
+  isCurrentUserAdmin: () -> (bool) query;
+  listCategories: () -> (vec Category) query;
+  listProducts: (filter: ProductFilter) -> (ProductListResult) query;
+  listProductsByCategory: (categoryId: CategoryId, limit: nat, offset:
+   nat) -> (ProductListResult) query;
+  removeFromCart: (productId: nat) -> (CartPublic);
+  searchProducts: (term: text, limit: nat, offset: nat) ->
+   (ProductListResult) query;
+  updateCartItem: (productId: nat, quantity: nat) -> (CartPublic);
+  updateMyProfile: (input: UserProfileInput) -> (UserProfilePublic);
+}
