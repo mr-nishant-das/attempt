@@ -22,6 +22,47 @@ type ShipmentUpdate =
    status: OrderStatus;
    timestamp: int;
  };
+type ServiceType = 
+ variant {
+   Ambulance;
+   Doctors;
+   EventManagement;
+   FoodDelivery;
+   FuneralServices;
+   Gifting;
+   Medicines;
+   Other;
+   SchoolAdmissions;
+   Taxi;
+   Tourism;
+   VideoConferencing;
+   WeddingsAnniversaries;
+ };
+type ServiceRequestStatus = 
+ variant {
+   Cancelled;
+   Completed;
+   Contacted;
+   New;
+ };
+type ServiceRequestPublic = 
+ record {
+   description: text;
+   id: nat;
+   isRequestForSelf: bool;
+   lastUpdatedAt: int;
+   preferredDate: text;
+   preferredTime: text;
+   recipientAddress: opt text;
+   recipientName: opt text;
+   recipientPhone: opt text;
+   serviceType: ServiceType;
+   status: ServiceRequestStatus;
+   submittedAt: int;
+   userId: text;
+   userName: text;
+   userPhone: text;
+ };
 type ProductListResult = 
  record {
    products: vec Product;
@@ -114,6 +155,19 @@ type DeliveryAddress =
    pincode: text;
    state: text;
  };
+type CreateServiceRequestInput = 
+ record {
+   description: text;
+   isRequestForSelf: bool;
+   preferredDate: text;
+   preferredTime: text;
+   recipientAddress: opt text;
+   recipientName: opt text;
+   recipientPhone: opt text;
+   serviceType: ServiceType;
+   userName: text;
+   userPhone: text;
+ };
 type CreateOrderInput = 
  record {
    deliveryAddress: DeliveryAddress;
@@ -160,12 +214,16 @@ service : {
   addToCart: (productId: nat, quantity: nat) -> (CartPublic);
   adminAddProduct: (input: ProductInput) -> (Product);
   adminDeleteProduct: (id: ProductId) -> (bool);
+  adminDeleteServiceRequest: (id: nat) -> (bool);
   adminGetAllOrders: (limit: nat, offset: nat) -> (vec OrderPublic) query;
+  adminGetServiceRequests: () -> (vec ServiceRequestPublic) query;
   adminSetDiscount: (id: ProductId, discountPercent: nat) -> (opt Product);
   adminSetUserAdmin: (targetUser: principal, adminStatus: bool) -> (bool);
   adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
    text) -> (opt OrderPublic);
   adminUpdateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
+  adminUpdateServiceRequestStatus: (id: nat, status: ServiceRequestStatus) ->
+   (opt ServiceRequestPublic);
   adminUpdateStock: (id: ProductId, newStock: nat) -> (opt Product);
   claimAdminIfFirst: () -> (bool);
   clearMyCart: () -> ();
@@ -185,6 +243,8 @@ service : {
   removeFromCart: (productId: nat) -> (CartPublic);
   searchProducts: (term: text, limit: nat, offset: nat) ->
    (ProductListResult) query;
+  submitServiceRequest: (input: CreateServiceRequestInput) ->
+   (ServiceRequestPublic);
   updateCartItem: (productId: nat, quantity: nat) -> (CartPublic);
   updateMyProfile: (input: UserProfileInput) -> (UserProfilePublic);
 }

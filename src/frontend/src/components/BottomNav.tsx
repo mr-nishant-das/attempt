@@ -1,23 +1,30 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Grid3X3, Home, Search, ShoppingCart, User } from "lucide-react";
+import {
+  Grid3X3,
+  Home,
+  Search,
+  ShoppingCart,
+  User,
+  Wrench,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   {
     label: "Home",
     to: "/home" as const,
-    icon: <Home size={22} />,
+    icon: <Home size={20} />,
     ocid: "bottom-nav-home",
   },
   {
     label: "Categories",
     to: "/categories" as const,
-    icon: <Grid3X3 size={22} />,
+    icon: <Grid3X3 size={20} />,
     ocid: "bottom-nav-categories",
   },
   {
     label: "Search",
     to: "/products" as const,
-    icon: <Search size={22} />,
+    icon: <Search size={20} />,
     ocid: "bottom-nav-search",
     search: {
       q: undefined as string | undefined,
@@ -25,15 +32,21 @@ const NAV_ITEMS = [
     },
   },
   {
+    label: "Services",
+    to: "/services" as const,
+    icon: <Wrench size={20} />,
+    ocid: "bottom-nav-services",
+  },
+  {
     label: "Cart",
     to: "/cart" as const,
-    icon: <ShoppingCart size={22} />,
+    icon: <ShoppingCart size={20} />,
     ocid: "bottom-nav-cart",
   },
   {
     label: "Account",
     to: "/orders" as const,
-    icon: <User size={22} />,
+    icon: <User size={20} />,
     ocid: "bottom-nav-account",
   },
 ];
@@ -64,7 +77,7 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
               key={item.to}
               to={item.to}
               search={"search" in item ? item.search : undefined}
-              className={`bottom-nav-item flex-1 relative px-1 ${
+              className={`bottom-nav-item flex-1 relative px-0.5 ${
                 isActive ? "bottom-nav-item-active" : "text-muted-foreground"
               }`}
               aria-current={isActive ? "page" : undefined}
@@ -81,7 +94,7 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
                   </span>
                 )}
               </span>
-              <span className="text-[10px] mt-0.5 leading-tight">
+              <span className="text-[9px] mt-0.5 leading-tight">
                 {item.label}
               </span>
             </Link>

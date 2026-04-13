@@ -89,11 +89,7 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface ShipmentUpdate {
-    status: OrderStatus;
-    message: string;
-    timestamp: bigint;
-}
+export type OrderId = bigint;
 export interface ProductInput {
     subCategory: string;
     title: string;
@@ -116,14 +112,14 @@ export interface Category {
     imageUrl: string;
     subCategories: Array<string>;
 }
+export interface ProductListResult {
+    total: bigint;
+    products: Array<Product>;
+}
 export interface CartItem {
     productId: bigint;
     addedAt: bigint;
     quantity: bigint;
-}
-export interface ProductListResult {
-    total: bigint;
-    products: Array<Product>;
 }
 export interface Address {
     city: string;
@@ -175,6 +171,35 @@ export interface UserProfilePublic {
     phone: string;
 }
 export type UserId = Principal;
+export interface CreateServiceRequestInput {
+    userName: string;
+    serviceType: ServiceType;
+    recipientPhone?: string;
+    description: string;
+    userPhone: string;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress?: string;
+    recipientName?: string;
+}
+export interface ServiceRequestPublic {
+    id: bigint;
+    status: ServiceRequestStatus;
+    userName: string;
+    serviceType: ServiceType;
+    userId: string;
+    recipientPhone?: string;
+    submittedAt: bigint;
+    description: string;
+    userPhone: string;
+    lastUpdatedAt: bigint;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress?: string;
+    recipientName?: string;
+}
 export interface CreateOrderInput {
     deliveryAddress: DeliveryAddress;
     items: Array<{
@@ -221,7 +246,11 @@ export interface Product {
     price: bigint;
     reviewCount: bigint;
 }
-export type OrderId = bigint;
+export interface ShipmentUpdate {
+    status: OrderStatus;
+    message: string;
+    timestamp: bigint;
+}
 export enum OrderStatus {
     Delivered = "Delivered",
     Confirmed = "Confirmed",
@@ -230,16 +259,40 @@ export enum OrderStatus {
     Shipped = "Shipped",
     OutForDelivery = "OutForDelivery"
 }
+export enum ServiceRequestStatus {
+    New = "New",
+    Contacted = "Contacted",
+    Cancelled = "Cancelled",
+    Completed = "Completed"
+}
+export enum ServiceType {
+    Ambulance = "Ambulance",
+    FoodDelivery = "FoodDelivery",
+    Taxi = "Taxi",
+    SchoolAdmissions = "SchoolAdmissions",
+    Medicines = "Medicines",
+    Gifting = "Gifting",
+    FuneralServices = "FuneralServices",
+    Tourism = "Tourism",
+    Doctors = "Doctors",
+    VideoConferencing = "VideoConferencing",
+    EventManagement = "EventManagement",
+    WeddingsAnniversaries = "WeddingsAnniversaries",
+    Other = "Other"
+}
 export interface backendInterface {
     addMyAddress(address: Address): Promise<UserProfilePublic>;
     addToCart(productId: bigint, quantity: bigint): Promise<CartPublic>;
     adminAddProduct(input: ProductInput): Promise<Product>;
     adminDeleteProduct(id: ProductId): Promise<boolean>;
+    adminDeleteServiceRequest(id: bigint): Promise<boolean>;
     adminGetAllOrders(limit: bigint, offset: bigint): Promise<Array<OrderPublic>>;
+    adminGetServiceRequests(): Promise<Array<ServiceRequestPublic>>;
     adminSetDiscount(id: ProductId, discountPercent: bigint): Promise<Product | null>;
     adminSetUserAdmin(targetUser: Principal, adminStatus: boolean): Promise<boolean>;
     adminUpdateOrderStatus(orderId: OrderId, newStatus: OrderStatus, message: string): Promise<OrderPublic | null>;
     adminUpdateProduct(id: ProductId, input: ProductInput): Promise<Product | null>;
+    adminUpdateServiceRequestStatus(id: bigint, status: ServiceRequestStatus): Promise<ServiceRequestPublic | null>;
     adminUpdateStock(id: ProductId, newStock: bigint): Promise<Product | null>;
     claimAdminIfFirst(): Promise<boolean>;
     clearMyCart(): Promise<void>;
@@ -257,10 +310,11 @@ export interface backendInterface {
     listProductsByCategory(categoryId: CategoryId, limit: bigint, offset: bigint): Promise<ProductListResult>;
     removeFromCart(productId: bigint): Promise<CartPublic>;
     searchProducts(term: string, limit: bigint, offset: bigint): Promise<ProductListResult>;
+    submitServiceRequest(input: CreateServiceRequestInput): Promise<ServiceRequestPublic>;
     updateCartItem(productId: bigint, quantity: bigint): Promise<CartPublic>;
     updateMyProfile(input: UserProfileInput): Promise<UserProfilePublic>;
 }
-import type { Category as _Category, CategoryId as _CategoryId, DeliveryAddress as _DeliveryAddress, OrderId as _OrderId, OrderItem as _OrderItem, OrderPublic as _OrderPublic, OrderStatus as _OrderStatus, Product as _Product, ProductFilter as _ProductFilter, ShipmentUpdate as _ShipmentUpdate } from "./declarations/backend.did.d.ts";
+import type { Category as _Category, CategoryId as _CategoryId, CreateServiceRequestInput as _CreateServiceRequestInput, DeliveryAddress as _DeliveryAddress, OrderId as _OrderId, OrderItem as _OrderItem, OrderPublic as _OrderPublic, OrderStatus as _OrderStatus, Product as _Product, ProductFilter as _ProductFilter, ServiceRequestPublic as _ServiceRequestPublic, ServiceRequestStatus as _ServiceRequestStatus, ServiceType as _ServiceType, ShipmentUpdate as _ShipmentUpdate } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async addMyAddress(arg0: Address): Promise<UserProfilePublic> {
@@ -319,6 +373,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async adminDeleteServiceRequest(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminDeleteServiceRequest(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminDeleteServiceRequest(arg0);
+            return result;
+        }
+    }
     async adminGetAllOrders(arg0: bigint, arg1: bigint): Promise<Array<OrderPublic>> {
         if (this.processError) {
             try {
@@ -333,18 +401,32 @@ export class Backend implements backendInterface {
             return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
         }
     }
+    async adminGetServiceRequests(): Promise<Array<ServiceRequestPublic>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminGetServiceRequests();
+                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminGetServiceRequests();
+            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async adminSetDiscount(arg0: ProductId, arg1: bigint): Promise<Product | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.adminSetDiscount(arg0, arg1);
-                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.adminSetDiscount(arg0, arg1);
-            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async adminSetUserAdmin(arg0: Principal, arg1: boolean): Promise<boolean> {
@@ -364,43 +446,57 @@ export class Backend implements backendInterface {
     async adminUpdateOrderStatus(arg0: OrderId, arg1: OrderStatus, arg2: string): Promise<OrderPublic | null> {
         if (this.processError) {
             try {
-                const result = await this.actor.adminUpdateOrderStatus(arg0, to_candid_OrderStatus_n11(this._uploadFile, this._downloadFile, arg1), arg2);
-                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.adminUpdateOrderStatus(arg0, to_candid_OrderStatus_n19(this._uploadFile, this._downloadFile, arg1), arg2);
+                return from_candid_opt_n21(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.adminUpdateOrderStatus(arg0, to_candid_OrderStatus_n11(this._uploadFile, this._downloadFile, arg1), arg2);
-            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.adminUpdateOrderStatus(arg0, to_candid_OrderStatus_n19(this._uploadFile, this._downloadFile, arg1), arg2);
+            return from_candid_opt_n21(this._uploadFile, this._downloadFile, result);
         }
     }
     async adminUpdateProduct(arg0: ProductId, arg1: ProductInput): Promise<Product | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.adminUpdateProduct(arg0, arg1);
-                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.adminUpdateProduct(arg0, arg1);
-            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async adminUpdateServiceRequestStatus(arg0: bigint, arg1: ServiceRequestStatus): Promise<ServiceRequestPublic | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminUpdateServiceRequestStatus(arg0, to_candid_ServiceRequestStatus_n22(this._uploadFile, this._downloadFile, arg1));
+                return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminUpdateServiceRequestStatus(arg0, to_candid_ServiceRequestStatus_n22(this._uploadFile, this._downloadFile, arg1));
+            return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
         }
     }
     async adminUpdateStock(arg0: ProductId, arg1: bigint): Promise<Product | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.adminUpdateStock(arg0, arg1);
-                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.adminUpdateStock(arg0, arg1);
-            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async claimAdminIfFirst(): Promise<boolean> {
@@ -449,28 +545,28 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getCategory(arg0);
-                return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n25(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCategory(arg0);
-            return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n25(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCategoryBySlug(arg0: string): Promise<Category | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCategoryBySlug(arg0);
-                return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n25(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCategoryBySlug(arg0);
-            return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n25(this._uploadFile, this._downloadFile, result);
         }
     }
     async getMyCart(): Promise<CartPublic> {
@@ -519,28 +615,28 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getOrder(arg0);
-                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n21(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getOrder(arg0);
-            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n21(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProduct(arg0: ProductId): Promise<Product | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getProduct(arg0);
-                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getProduct(arg0);
-            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCurrentUserAdmin(): Promise<boolean> {
@@ -574,14 +670,14 @@ export class Backend implements backendInterface {
     async listProducts(arg0: ProductFilter): Promise<ProductListResult> {
         if (this.processError) {
             try {
-                const result = await this.actor.listProducts(to_candid_ProductFilter_n15(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.listProducts(to_candid_ProductFilter_n26(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.listProducts(to_candid_ProductFilter_n15(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.listProducts(to_candid_ProductFilter_n26(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
@@ -627,6 +723,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async submitServiceRequest(arg0: CreateServiceRequestInput): Promise<ServiceRequestPublic> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitServiceRequest(to_candid_CreateServiceRequestInput_n28(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_ServiceRequestPublic_n11(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.submitServiceRequest(to_candid_CreateServiceRequestInput_n28(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_ServiceRequestPublic_n11(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async updateCartItem(arg0: bigint, arg1: bigint): Promise<CartPublic> {
         if (this.processError) {
             try {
@@ -662,20 +772,86 @@ function from_candid_OrderPublic_n2(_uploadFile: (file: ExternalBlob) => Promise
 function from_candid_OrderStatus_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _OrderStatus): OrderStatus {
     return from_candid_variant_n5(_uploadFile, _downloadFile, value);
 }
+function from_candid_ServiceRequestPublic_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ServiceRequestPublic): ServiceRequestPublic {
+    return from_candid_record_n12(_uploadFile, _downloadFile, value);
+}
+function from_candid_ServiceRequestStatus_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ServiceRequestStatus): ServiceRequestStatus {
+    return from_candid_variant_n14(_uploadFile, _downloadFile, value);
+}
+function from_candid_ServiceType_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ServiceType): ServiceType {
+    return from_candid_variant_n16(_uploadFile, _downloadFile, value);
+}
 function from_candid_ShipmentUpdate_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ShipmentUpdate): ShipmentUpdate {
     return from_candid_record_n8(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Product]): Product | null {
+function from_candid_opt_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_OrderPublic]): OrderPublic | null {
+function from_candid_opt_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Product]): Product | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_OrderPublic]): OrderPublic | null {
     return value.length === 0 ? null : from_candid_OrderPublic_n2(_uploadFile, _downloadFile, value[0]);
 }
-function from_candid_opt_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Category]): Category | null {
+function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ServiceRequestPublic]): ServiceRequestPublic | null {
+    return value.length === 0 ? null : from_candid_ServiceRequestPublic_n11(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Category]): Category | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
+}
+function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: bigint;
+    status: _ServiceRequestStatus;
+    userName: string;
+    serviceType: _ServiceType;
+    userId: string;
+    recipientPhone: [] | [string];
+    submittedAt: bigint;
+    description: string;
+    userPhone: string;
+    lastUpdatedAt: bigint;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress: [] | [string];
+    recipientName: [] | [string];
+}): {
+    id: bigint;
+    status: ServiceRequestStatus;
+    userName: string;
+    serviceType: ServiceType;
+    userId: string;
+    recipientPhone?: string;
+    submittedAt: bigint;
+    description: string;
+    userPhone: string;
+    lastUpdatedAt: bigint;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress?: string;
+    recipientName?: string;
+} {
+    return {
+        id: value.id,
+        status: from_candid_ServiceRequestStatus_n13(_uploadFile, _downloadFile, value.status),
+        userName: value.userName,
+        serviceType: from_candid_ServiceType_n15(_uploadFile, _downloadFile, value.serviceType),
+        userId: value.userId,
+        recipientPhone: record_opt_to_undefined(from_candid_opt_n17(_uploadFile, _downloadFile, value.recipientPhone)),
+        submittedAt: value.submittedAt,
+        description: value.description,
+        userPhone: value.userPhone,
+        lastUpdatedAt: value.lastUpdatedAt,
+        isRequestForSelf: value.isRequestForSelf,
+        preferredDate: value.preferredDate,
+        preferredTime: value.preferredTime,
+        recipientAddress: record_opt_to_undefined(from_candid_opt_n17(_uploadFile, _downloadFile, value.recipientAddress)),
+        recipientName: record_opt_to_undefined(from_candid_opt_n17(_uploadFile, _downloadFile, value.recipientName))
+    };
 }
 function from_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: _OrderId;
@@ -728,6 +904,46 @@ function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint
         timestamp: value.timestamp
     };
 }
+function from_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    New: null;
+} | {
+    Contacted: null;
+} | {
+    Cancelled: null;
+} | {
+    Completed: null;
+}): ServiceRequestStatus {
+    return "New" in value ? ServiceRequestStatus.New : "Contacted" in value ? ServiceRequestStatus.Contacted : "Cancelled" in value ? ServiceRequestStatus.Cancelled : "Completed" in value ? ServiceRequestStatus.Completed : value;
+}
+function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    Ambulance: null;
+} | {
+    FoodDelivery: null;
+} | {
+    Taxi: null;
+} | {
+    SchoolAdmissions: null;
+} | {
+    Medicines: null;
+} | {
+    Gifting: null;
+} | {
+    FuneralServices: null;
+} | {
+    Tourism: null;
+} | {
+    Doctors: null;
+} | {
+    VideoConferencing: null;
+} | {
+    EventManagement: null;
+} | {
+    WeddingsAnniversaries: null;
+} | {
+    Other: null;
+}): ServiceType {
+    return "Ambulance" in value ? ServiceType.Ambulance : "FoodDelivery" in value ? ServiceType.FoodDelivery : "Taxi" in value ? ServiceType.Taxi : "SchoolAdmissions" in value ? ServiceType.SchoolAdmissions : "Medicines" in value ? ServiceType.Medicines : "Gifting" in value ? ServiceType.Gifting : "FuneralServices" in value ? ServiceType.FuneralServices : "Tourism" in value ? ServiceType.Tourism : "Doctors" in value ? ServiceType.Doctors : "VideoConferencing" in value ? ServiceType.VideoConferencing : "EventManagement" in value ? ServiceType.EventManagement : "WeddingsAnniversaries" in value ? ServiceType.WeddingsAnniversaries : "Other" in value ? ServiceType.Other : value;
+}
 function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     Delivered: null;
 } | {
@@ -746,16 +962,28 @@ function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uin
 function from_candid_vec_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_OrderPublic>): Array<OrderPublic> {
     return value.map((x)=>from_candid_OrderPublic_n2(_uploadFile, _downloadFile, x));
 }
+function from_candid_vec_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ServiceRequestPublic>): Array<ServiceRequestPublic> {
+    return value.map((x)=>from_candid_ServiceRequestPublic_n11(_uploadFile, _downloadFile, x));
+}
 function from_candid_vec_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ShipmentUpdate>): Array<ShipmentUpdate> {
     return value.map((x)=>from_candid_ShipmentUpdate_n7(_uploadFile, _downloadFile, x));
 }
-function to_candid_OrderStatus_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
-    return to_candid_variant_n12(_uploadFile, _downloadFile, value);
+function to_candid_CreateServiceRequestInput_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CreateServiceRequestInput): _CreateServiceRequestInput {
+    return to_candid_record_n29(_uploadFile, _downloadFile, value);
 }
-function to_candid_ProductFilter_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ProductFilter): _ProductFilter {
-    return to_candid_record_n16(_uploadFile, _downloadFile, value);
+function to_candid_OrderStatus_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
+    return to_candid_variant_n20(_uploadFile, _downloadFile, value);
 }
-function to_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_ProductFilter_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ProductFilter): _ProductFilter {
+    return to_candid_record_n27(_uploadFile, _downloadFile, value);
+}
+function to_candid_ServiceRequestStatus_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ServiceRequestStatus): _ServiceRequestStatus {
+    return to_candid_variant_n23(_uploadFile, _downloadFile, value);
+}
+function to_candid_ServiceType_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ServiceType): _ServiceType {
+    return to_candid_variant_n31(_uploadFile, _downloadFile, value);
+}
+function to_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     categoryId?: CategoryId;
     inStockOnly: boolean;
     offset: bigint;
@@ -782,7 +1010,43 @@ function to_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         minPrice: value.minPrice ? candid_some(value.minPrice) : candid_none()
     };
 }
-function to_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
+function to_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    userName: string;
+    serviceType: ServiceType;
+    recipientPhone?: string;
+    description: string;
+    userPhone: string;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress?: string;
+    recipientName?: string;
+}): {
+    userName: string;
+    serviceType: _ServiceType;
+    recipientPhone: [] | [string];
+    description: string;
+    userPhone: string;
+    isRequestForSelf: boolean;
+    preferredDate: string;
+    preferredTime: string;
+    recipientAddress: [] | [string];
+    recipientName: [] | [string];
+} {
+    return {
+        userName: value.userName,
+        serviceType: to_candid_ServiceType_n30(_uploadFile, _downloadFile, value.serviceType),
+        recipientPhone: value.recipientPhone ? candid_some(value.recipientPhone) : candid_none(),
+        description: value.description,
+        userPhone: value.userPhone,
+        isRequestForSelf: value.isRequestForSelf,
+        preferredDate: value.preferredDate,
+        preferredTime: value.preferredTime,
+        recipientAddress: value.recipientAddress ? candid_some(value.recipientAddress) : candid_none(),
+        recipientName: value.recipientName ? candid_some(value.recipientName) : candid_none()
+    };
+}
+function to_candid_variant_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
     Delivered: null;
 } | {
     Confirmed: null;
@@ -807,6 +1071,80 @@ function to_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint
         Shipped: null
     } : value == OrderStatus.OutForDelivery ? {
         OutForDelivery: null
+    } : value;
+}
+function to_candid_variant_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ServiceRequestStatus): {
+    New: null;
+} | {
+    Contacted: null;
+} | {
+    Cancelled: null;
+} | {
+    Completed: null;
+} {
+    return value == ServiceRequestStatus.New ? {
+        New: null
+    } : value == ServiceRequestStatus.Contacted ? {
+        Contacted: null
+    } : value == ServiceRequestStatus.Cancelled ? {
+        Cancelled: null
+    } : value == ServiceRequestStatus.Completed ? {
+        Completed: null
+    } : value;
+}
+function to_candid_variant_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ServiceType): {
+    Ambulance: null;
+} | {
+    FoodDelivery: null;
+} | {
+    Taxi: null;
+} | {
+    SchoolAdmissions: null;
+} | {
+    Medicines: null;
+} | {
+    Gifting: null;
+} | {
+    FuneralServices: null;
+} | {
+    Tourism: null;
+} | {
+    Doctors: null;
+} | {
+    VideoConferencing: null;
+} | {
+    EventManagement: null;
+} | {
+    WeddingsAnniversaries: null;
+} | {
+    Other: null;
+} {
+    return value == ServiceType.Ambulance ? {
+        Ambulance: null
+    } : value == ServiceType.FoodDelivery ? {
+        FoodDelivery: null
+    } : value == ServiceType.Taxi ? {
+        Taxi: null
+    } : value == ServiceType.SchoolAdmissions ? {
+        SchoolAdmissions: null
+    } : value == ServiceType.Medicines ? {
+        Medicines: null
+    } : value == ServiceType.Gifting ? {
+        Gifting: null
+    } : value == ServiceType.FuneralServices ? {
+        FuneralServices: null
+    } : value == ServiceType.Tourism ? {
+        Tourism: null
+    } : value == ServiceType.Doctors ? {
+        Doctors: null
+    } : value == ServiceType.VideoConferencing ? {
+        VideoConferencing: null
+    } : value == ServiceType.EventManagement ? {
+        EventManagement: null
+    } : value == ServiceType.WeddingsAnniversaries ? {
+        WeddingsAnniversaries: null
+    } : value == ServiceType.Other ? {
+        Other: null
     } : value;
 }
 export interface CreateActorOptions {

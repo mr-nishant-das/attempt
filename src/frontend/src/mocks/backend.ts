@@ -1,5 +1,5 @@
-import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult } from "../backend";
-import { OrderStatus } from "../backend";
+import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult, ServiceRequestPublic, CreateServiceRequestInput } from "../backend";
+import { OrderStatus, ServiceRequestStatus } from "../backend";
 import type { Principal } from "@icp-sdk/core/principal";
 
 const samplePrincipal = { toText: () => "aaaaa-aa" } as unknown as Principal;
@@ -277,4 +277,25 @@ export const mockBackend: backendInterface = {
   adminSetUserAdmin: async (_user, _status) => true,
   claimAdminIfFirst: async () => false,
   isCurrentUserAdmin: async () => false,
+
+  submitServiceRequest: async (input: CreateServiceRequestInput): Promise<ServiceRequestPublic> => ({
+    id: BigInt(1),
+    status: ServiceRequestStatus.New,
+    userName: input.userName,
+    serviceType: input.serviceType,
+    userId: "aaaaa-aa",
+    submittedAt: BigInt(Date.now() * 1_000_000),
+    description: input.description,
+    userPhone: input.userPhone,
+    lastUpdatedAt: BigInt(Date.now() * 1_000_000),
+    preferredDate: input.preferredDate,
+    preferredTime: input.preferredTime,
+    isRequestForSelf: input.isRequestForSelf,
+    recipientName: input.recipientName,
+    recipientPhone: input.recipientPhone,
+    recipientAddress: input.recipientAddress,
+  }),
+  adminGetServiceRequests: async (): Promise<ServiceRequestPublic[]> => [],
+  adminUpdateServiceRequestStatus: async (_id, _status) => null,
+  adminDeleteServiceRequest: async (_id) => true,
 };

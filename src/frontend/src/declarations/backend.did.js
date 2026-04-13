@@ -116,6 +116,44 @@ export const OrderPublic = IDL.Record({
   'totalAmount' : IDL.Nat,
   'items' : IDL.Vec(OrderItem),
 });
+export const ServiceRequestStatus = IDL.Variant({
+  'New' : IDL.Null,
+  'Contacted' : IDL.Null,
+  'Cancelled' : IDL.Null,
+  'Completed' : IDL.Null,
+});
+export const ServiceType = IDL.Variant({
+  'Ambulance' : IDL.Null,
+  'FoodDelivery' : IDL.Null,
+  'Taxi' : IDL.Null,
+  'SchoolAdmissions' : IDL.Null,
+  'Medicines' : IDL.Null,
+  'Gifting' : IDL.Null,
+  'FuneralServices' : IDL.Null,
+  'Tourism' : IDL.Null,
+  'Doctors' : IDL.Null,
+  'VideoConferencing' : IDL.Null,
+  'EventManagement' : IDL.Null,
+  'WeddingsAnniversaries' : IDL.Null,
+  'Other' : IDL.Null,
+});
+export const ServiceRequestPublic = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : ServiceRequestStatus,
+  'userName' : IDL.Text,
+  'serviceType' : ServiceType,
+  'userId' : IDL.Text,
+  'recipientPhone' : IDL.Opt(IDL.Text),
+  'submittedAt' : IDL.Int,
+  'description' : IDL.Text,
+  'userPhone' : IDL.Text,
+  'lastUpdatedAt' : IDL.Int,
+  'isRequestForSelf' : IDL.Bool,
+  'preferredDate' : IDL.Text,
+  'preferredTime' : IDL.Text,
+  'recipientAddress' : IDL.Opt(IDL.Text),
+  'recipientName' : IDL.Opt(IDL.Text),
+});
 export const CreateOrderInput = IDL.Record({
   'deliveryAddress' : DeliveryAddress,
   'items' : IDL.Vec(
@@ -143,6 +181,18 @@ export const ProductListResult = IDL.Record({
   'total' : IDL.Nat,
   'products' : IDL.Vec(Product),
 });
+export const CreateServiceRequestInput = IDL.Record({
+  'userName' : IDL.Text,
+  'serviceType' : ServiceType,
+  'recipientPhone' : IDL.Opt(IDL.Text),
+  'description' : IDL.Text,
+  'userPhone' : IDL.Text,
+  'isRequestForSelf' : IDL.Bool,
+  'preferredDate' : IDL.Text,
+  'preferredTime' : IDL.Text,
+  'recipientAddress' : IDL.Opt(IDL.Text),
+  'recipientName' : IDL.Opt(IDL.Text),
+});
 export const UserProfileInput = IDL.Record({
   'name' : IDL.Text,
   'email' : IDL.Text,
@@ -154,9 +204,15 @@ export const idlService = IDL.Service({
   'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
   'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
   'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
+  'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'adminGetAllOrders' : IDL.Func(
       [IDL.Nat, IDL.Nat],
       [IDL.Vec(OrderPublic)],
+      ['query'],
+    ),
+  'adminGetServiceRequests' : IDL.Func(
+      [],
+      [IDL.Vec(ServiceRequestPublic)],
       ['query'],
     ),
   'adminSetDiscount' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
@@ -169,6 +225,11 @@ export const idlService = IDL.Service({
   'adminUpdateProduct' : IDL.Func(
       [ProductId, ProductInput],
       [IDL.Opt(Product)],
+      [],
+    ),
+  'adminUpdateServiceRequestStatus' : IDL.Func(
+      [IDL.Nat, ServiceRequestStatus],
+      [IDL.Opt(ServiceRequestPublic)],
       [],
     ),
   'adminUpdateStock' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
@@ -195,6 +256,11 @@ export const idlService = IDL.Service({
       [IDL.Text, IDL.Nat, IDL.Nat],
       [ProductListResult],
       ['query'],
+    ),
+  'submitServiceRequest' : IDL.Func(
+      [CreateServiceRequestInput],
+      [ServiceRequestPublic],
+      [],
     ),
   'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
   'updateMyProfile' : IDL.Func([UserProfileInput], [UserProfilePublic], []),
@@ -311,6 +377,44 @@ export const idlFactory = ({ IDL }) => {
     'totalAmount' : IDL.Nat,
     'items' : IDL.Vec(OrderItem),
   });
+  const ServiceRequestStatus = IDL.Variant({
+    'New' : IDL.Null,
+    'Contacted' : IDL.Null,
+    'Cancelled' : IDL.Null,
+    'Completed' : IDL.Null,
+  });
+  const ServiceType = IDL.Variant({
+    'Ambulance' : IDL.Null,
+    'FoodDelivery' : IDL.Null,
+    'Taxi' : IDL.Null,
+    'SchoolAdmissions' : IDL.Null,
+    'Medicines' : IDL.Null,
+    'Gifting' : IDL.Null,
+    'FuneralServices' : IDL.Null,
+    'Tourism' : IDL.Null,
+    'Doctors' : IDL.Null,
+    'VideoConferencing' : IDL.Null,
+    'EventManagement' : IDL.Null,
+    'WeddingsAnniversaries' : IDL.Null,
+    'Other' : IDL.Null,
+  });
+  const ServiceRequestPublic = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : ServiceRequestStatus,
+    'userName' : IDL.Text,
+    'serviceType' : ServiceType,
+    'userId' : IDL.Text,
+    'recipientPhone' : IDL.Opt(IDL.Text),
+    'submittedAt' : IDL.Int,
+    'description' : IDL.Text,
+    'userPhone' : IDL.Text,
+    'lastUpdatedAt' : IDL.Int,
+    'isRequestForSelf' : IDL.Bool,
+    'preferredDate' : IDL.Text,
+    'preferredTime' : IDL.Text,
+    'recipientAddress' : IDL.Opt(IDL.Text),
+    'recipientName' : IDL.Opt(IDL.Text),
+  });
   const CreateOrderInput = IDL.Record({
     'deliveryAddress' : DeliveryAddress,
     'items' : IDL.Vec(
@@ -338,6 +442,18 @@ export const idlFactory = ({ IDL }) => {
     'total' : IDL.Nat,
     'products' : IDL.Vec(Product),
   });
+  const CreateServiceRequestInput = IDL.Record({
+    'userName' : IDL.Text,
+    'serviceType' : ServiceType,
+    'recipientPhone' : IDL.Opt(IDL.Text),
+    'description' : IDL.Text,
+    'userPhone' : IDL.Text,
+    'isRequestForSelf' : IDL.Bool,
+    'preferredDate' : IDL.Text,
+    'preferredTime' : IDL.Text,
+    'recipientAddress' : IDL.Opt(IDL.Text),
+    'recipientName' : IDL.Opt(IDL.Text),
+  });
   const UserProfileInput = IDL.Record({
     'name' : IDL.Text,
     'email' : IDL.Text,
@@ -349,9 +465,15 @@ export const idlFactory = ({ IDL }) => {
     'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
     'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
     'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
+    'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'adminGetAllOrders' : IDL.Func(
         [IDL.Nat, IDL.Nat],
         [IDL.Vec(OrderPublic)],
+        ['query'],
+      ),
+    'adminGetServiceRequests' : IDL.Func(
+        [],
+        [IDL.Vec(ServiceRequestPublic)],
         ['query'],
       ),
     'adminSetDiscount' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
@@ -364,6 +486,11 @@ export const idlFactory = ({ IDL }) => {
     'adminUpdateProduct' : IDL.Func(
         [ProductId, ProductInput],
         [IDL.Opt(Product)],
+        [],
+      ),
+    'adminUpdateServiceRequestStatus' : IDL.Func(
+        [IDL.Nat, ServiceRequestStatus],
+        [IDL.Opt(ServiceRequestPublic)],
         [],
       ),
     'adminUpdateStock' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
@@ -390,6 +517,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text, IDL.Nat, IDL.Nat],
         [ProductListResult],
         ['query'],
+      ),
+    'submitServiceRequest' : IDL.Func(
+        [CreateServiceRequestInput],
+        [ServiceRequestPublic],
+        [],
       ),
     'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
     'updateMyProfile' : IDL.Func([UserProfileInput], [UserProfilePublic], []),

@@ -1,261 +1,708 @@
+import {
+  type CreateServiceRequestInput,
+  type ServiceRequestPublic,
+  ServiceType,
+  createActor,
+} from "@/backend";
 import { Layout } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Link } from "@tanstack/react-router";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowRight,
-  BookOpen,
-  Camera,
-  CheckCircle2,
-  ChefHat,
-  Clock,
-  Home,
-  Leaf,
-  Paintbrush,
-  School,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useActor } from "@caffeineai/core-infrastructure";
+import { AlertTriangle, CheckCircle2, Globe, Info } from "lucide-react";
 import { useState } from "react";
 
-// ─── Coming Soon service tiles ─────────────────────────────────────────────
+// ─── Service definitions ─────────────────────────────────────────────────────
+interface ServiceDef {
+  type: ServiceType;
+  emoji: string;
+  title: string;
+  desc: string;
+  color: string;
+}
 
-const UPCOMING_SERVICES = [
+const SERVICES: ServiceDef[] = [
   {
-    icon: <Home size={22} />,
-    name: "Home Services",
-    desc: "Plumbers, electricians & home repair",
+    type: ServiceType.Ambulance,
+    emoji: "🚑",
+    title: "Ambulance",
+    desc: "Emergency medical transport across Assam, 24/7 dispatch.",
+    color: "bg-destructive/10 text-destructive",
+  },
+  {
+    type: ServiceType.Doctors,
+    emoji: "👨‍⚕️",
+    title: "Doctors",
+    desc: "Home visits and clinic consultations with local doctors.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <ChefHat size={22} />,
-    name: "Catering",
-    desc: "Authentic Assamese cuisine for events",
+    type: ServiceType.Medicines,
+    emoji: "💊",
+    title: "Medicines",
+    desc: "Medicine delivery to your doorstep within Assam.",
     color: "bg-secondary/15 text-secondary",
   },
   {
-    icon: <Camera size={22} />,
-    name: "Photography",
-    desc: "Wedding & event photographers",
+    type: ServiceType.FoodDelivery,
+    emoji: "🍱",
+    title: "Food Delivery",
+    desc: "Fresh local home-cooked Assamese meals delivered hot.",
     color: "bg-accent/20 text-accent-foreground",
   },
   {
-    icon: <School size={22} />,
-    name: "Tutoring",
-    desc: "Assamese language & cultural classes",
+    type: ServiceType.Taxi,
+    emoji: "🚕",
+    title: "Taxi & Transport",
+    desc: "Reliable local taxi and transport throughout Assam.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <Leaf size={22} />,
-    name: "Farm Fresh",
-    desc: "Direct from local Assamese farmers",
+    type: ServiceType.EventManagement,
+    emoji: "🎪",
+    title: "Event Management",
+    desc: "Hall bookings and full event coordination services.",
     color: "bg-secondary/15 text-secondary",
   },
   {
-    icon: <Paintbrush size={22} />,
-    name: "Artisan Workshops",
-    desc: "Learn traditional crafts from masters",
+    type: ServiceType.FuneralServices,
+    emoji: "🕯️",
+    title: "Funeral Services",
+    desc: "Compassionate funeral arrangements and last rites support.",
+    color: "bg-muted text-muted-foreground",
+  },
+  {
+    type: ServiceType.WeddingsAnniversaries,
+    emoji: "💒",
+    title: "Weddings & Anniversaries",
+    desc: "Wedding planning, venue selection and anniversary events.",
     color: "bg-accent/20 text-accent-foreground",
   },
   {
-    icon: <BookOpen size={22} />,
-    name: "Cultural Tours",
-    desc: "Guided heritage & nature tours",
+    type: ServiceType.Gifting,
+    emoji: "🎁",
+    title: "Gifting",
+    desc: "Curated Assamese gift boxes delivered to your loved ones.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <Home size={22} />,
-    name: "Homestays",
-    desc: "Authentic rural Assamese experience",
+    type: ServiceType.VideoConferencing,
+    emoji: "📹",
+    title: "Video Conferencing",
+    desc: "Live video connectivity for rural and remote Assam areas.",
+    color: "bg-secondary/15 text-secondary",
+  },
+  {
+    type: ServiceType.SchoolAdmissions,
+    emoji: "🎓",
+    title: "School/College Admissions",
+    desc: "Guidance, documentation and admission support in Assam.",
+    color: "bg-accent/20 text-accent-foreground",
+  },
+  {
+    type: ServiceType.Tourism,
+    emoji: "🏔️",
+    title: "Tourism",
+    desc: "Authentic Assam travel packages, guides and homestays.",
+    color: "bg-primary/10 text-primary",
+  },
+  {
+    type: ServiceType.Other,
+    emoji: "🤝",
+    title: "Community Help",
+    desc: "Other community needs — describe what you require.",
     color: "bg-secondary/15 text-secondary",
   },
 ];
 
-const COMING_FEATURES = [
-  "Verified local service providers",
-  "Secure in-app booking & payment",
-  "Community ratings & reviews",
-  "Artisan profiles & portfolios",
-];
+// ─── Today's date string for min date ────────────────────────────────────────
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
 
-// ─── Component ────────────────────────────────────────────────────────────
+// ─── Booking form state ───────────────────────────────────────────────────────
+interface BookingForm {
+  userName: string;
+  userPhone: string;
+  preferredDate: string;
+  preferredTime: string;
+  description: string;
+  isRequestForSelf: boolean;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+}
 
+interface FormErrors {
+  userName?: string;
+  userPhone?: string;
+  preferredDate?: string;
+  preferredTime?: string;
+  description?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+}
+
+const BLANK_FORM: BookingForm = {
+  userName: "",
+  userPhone: "",
+  preferredDate: "",
+  preferredTime: "",
+  description: "",
+  isRequestForSelf: true,
+  recipientName: "",
+  recipientPhone: "",
+  recipientAddress: "",
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ServicesPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const { actor, isFetching: actorFetching } = useActor(createActor);
 
-  const handleNotify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSubmitting(true);
-    // Simulate submission (no email backend wired)
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 900);
+  // Booking modal
+  const [bookingService, setBookingService] = useState<ServiceDef | null>(null);
+  const [form, setForm] = useState<BookingForm>(BLANK_FORM);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
+
+  // Success modal
+  const [successRequest, setSuccessRequest] =
+    useState<ServiceRequestPublic | null>(null);
+  const [successService, setSuccessService] = useState<string>("");
+  const [successRecipientName, setSuccessRecipientName] = useState<string>("");
+
+  // ─── Open / close booking modal ───────────────────────────────────────────
+  const openBooking = (svc: ServiceDef) => {
+    setBookingService(svc);
+    setForm(BLANK_FORM);
+    setErrors({});
+    setBackendError(null);
   };
+
+  const closeBooking = () => {
+    setBookingService(null);
+  };
+
+  // ─── Validate form ────────────────────────────────────────────────────────
+  const validate = (): boolean => {
+    const e: FormErrors = {};
+    if (!form.userName.trim()) e.userName = "Name is required";
+    const phone = form.userPhone.replace(/\D/g, "");
+    if (!phone || phone.length < 10)
+      e.userPhone = "Enter a valid 10-digit phone number";
+    if (!form.preferredDate) e.preferredDate = "Preferred date is required";
+    if (!form.preferredTime) e.preferredTime = "Preferred time is required";
+    if (!form.description.trim())
+      e.description = "Please describe what you need";
+
+    if (!form.isRequestForSelf) {
+      if (!form.recipientName.trim())
+        e.recipientName = "Recipient name is required";
+      const rPhone = form.recipientPhone.replace(/\D/g, "");
+      if (!rPhone || rPhone.length < 10)
+        e.recipientPhone = "Enter a valid 10-digit phone number";
+    }
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  // ─── Submit booking ───────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!validate() || !bookingService || !actor) return;
+    setSubmitting(true);
+    setBackendError(null);
+    try {
+      const input: CreateServiceRequestInput = {
+        userName: form.userName.trim(),
+        userPhone: form.userPhone.trim(),
+        serviceType: bookingService.type,
+        preferredDate: form.preferredDate,
+        preferredTime: form.preferredTime,
+        description: form.description.trim(),
+        isRequestForSelf: form.isRequestForSelf,
+        recipientName: form.isRequestForSelf
+          ? undefined
+          : form.recipientName.trim() || undefined,
+        recipientPhone: form.isRequestForSelf
+          ? undefined
+          : form.recipientPhone.trim() || undefined,
+        recipientAddress:
+          form.isRequestForSelf || !form.recipientAddress.trim()
+            ? undefined
+            : form.recipientAddress.trim(),
+      };
+      const result = await actor.submitServiceRequest(input);
+      setSuccessRequest(result);
+      setSuccessService(bookingService.title);
+      setSuccessRecipientName(
+        form.isRequestForSelf ? "" : form.recipientName.trim(),
+      );
+      setBookingService(null);
+    } catch (_err) {
+      setBackendError("Failed to submit request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const fieldError = (key: keyof FormErrors) =>
+    errors[key] ? (
+      <p className="text-xs text-destructive mt-1">{errors[key]}</p>
+    ) : null;
 
   return (
     <Layout>
-      <div className="px-4 py-4" data-ocid="services-page">
-        {/* Hero banner */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-secondary/25 via-primary/10 to-accent/15 border border-border rounded-2xl p-6 text-center mb-6">
-          {/* Decorative circles */}
-          <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 pointer-events-none"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-secondary/10 pointer-events-none"
-            aria-hidden="true"
-          />
+      <div className="px-4 py-4 pb-24" data-ocid="services-page">
+        {/* Page header */}
+        <div className="mb-4">
+          <h1 className="font-display text-2xl font-black text-foreground tracking-tight">
+            Assam Community Services
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Local services for the people of Assam
+          </p>
+        </div>
 
-          <div className="relative">
-            <div className="w-16 h-16 bg-card border-2 border-secondary/30 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <Clock size={30} className="text-secondary" />
-            </div>
-
-            <h1 className="font-display text-3xl font-black text-foreground mb-2 tracking-tight">
-              Services
-            </h1>
-
-            <Badge className="bg-secondary/20 text-secondary border-secondary/30 text-xs font-bold mb-4 gap-1.5">
-              🚧 Coming Soon
-            </Badge>
-
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-              We&apos;re building a marketplace for authentic Assamese services
-              — connecting you with local experts, artisans, and professionals
-              from Assam.
+        {/* Global info banner — always visible */}
+        <div
+          className="flex items-start gap-3 bg-primary/8 border border-primary/25 rounded-xl px-4 py-3 mb-5"
+          role="note"
+          data-ocid="services-global-banner"
+        >
+          <Globe size={18} className="text-primary flex-none mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Available worldwide — fulfilled within Assam
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              All services are physically carried out within Assam. You can
+              request a service from anywhere in the world for someone in Assam.
             </p>
           </div>
         </div>
 
-        {/* What we're building */}
-        <div className="mb-6">
-          <h2 className="font-display font-bold text-base text-foreground mb-3">
-            Services we&apos;re building
-          </h2>
-          <div className="grid grid-cols-2 gap-2.5">
-            {UPCOMING_SERVICES.map((service) => (
-              <div
-                key={service.name}
-                className="bg-card border border-border rounded-xl p-3.5 flex flex-col gap-2 opacity-75 hover:opacity-100 transition-smooth"
-                data-ocid={`service-tile-${service.name.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center flex-none ${service.color}`}
-                >
-                  {service.icon}
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-foreground leading-tight">
-                    {service.name}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    {service.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Feature highlights */}
-        <div className="bg-card border border-border rounded-xl p-4 mb-6">
-          <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-            <span className="text-primary">✦</span> What to expect
-          </h3>
-          <div className="space-y-2.5">
-            {COMING_FEATURES.map((feat) => (
-              <div key={feat} className="flex items-center gap-2.5">
-                <CheckCircle2 size={15} className="text-secondary flex-none" />
-                <p className="text-sm text-muted-foreground">{feat}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Email notify section */}
-        <div
-          className="bg-gradient-to-br from-primary/8 to-secondary/8 border border-primary/20 rounded-2xl p-5 mb-6"
-          data-ocid="services-notify-section"
-        >
-          {submitted ? (
+        {/* Services grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {SERVICES.map((svc) => (
             <div
-              className="text-center py-4"
-              data-ocid="services-notify-success"
+              key={svc.type}
+              className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 transition-smooth hover:border-primary/30 hover:shadow-sm"
+              data-ocid={`service-card-${svc.type.toLowerCase()}`}
             >
-              <CheckCircle2 size={36} className="text-secondary mx-auto mb-3" />
-              <p className="font-display font-bold text-foreground mb-1">
-                You&apos;re on the list! 🎉
-              </p>
-              <p className="text-sm text-muted-foreground">
-                We&apos;ll notify you at{" "}
-                <span className="font-semibold text-foreground">{email}</span>{" "}
-                when Services launches.
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="font-display font-bold text-base text-foreground mb-1">
-                Be the first to know 🔔
-              </p>
-              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                Enter your email and we&apos;ll notify you when the Services
-                marketplace launches. No spam — only Assam goodness.
-              </p>
-              <form onSubmit={handleNotify} className="space-y-3">
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="search-input h-11"
-                  data-ocid="services-email-input"
-                />
-                <Button
-                  type="submit"
-                  disabled={submitting || !email.trim()}
-                  className="w-full btn-primary border-0 h-11 gap-2"
-                  data-ocid="services-notify-submit"
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-none ${svc.color}`}
+                  aria-hidden="true"
                 >
-                  {submitting ? "Submitting…" : "Notify Me When Live"}
-                  {!submitting && <ArrowRight size={16} />}
-                </Button>
-              </form>
-            </>
-          )}
-        </div>
-
-        {/* Artisan offer CTA */}
-        <div className="bg-muted/40 border border-border rounded-xl p-4 text-center mb-5">
-          <p className="text-sm font-semibold text-foreground mb-1">
-            🛕 Are you an Assamese artisan or service provider?
-          </p>
-          <p className="text-xs text-muted-foreground mb-3">
-            Join our early access program and be among the first listed on
-            AssamRoots Services
-          </p>
-          <Button
-            variant="outline"
-            className="border-primary/30 text-primary text-sm gap-2 h-9"
-            data-ocid="services-provider-waitlist"
-          >
-            Apply as Provider <ArrowRight size={13} />
-          </Button>
-        </div>
-
-        <div className="text-center">
-          <Link
-            to="/home"
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            ← Back to Shopping
-          </Link>
+                  {svc.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground leading-tight">
+                    {svc.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                    {svc.desc}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="w-full h-9 text-xs font-semibold btn-primary border-0"
+                disabled={actorFetching}
+                onClick={() => openBooking(svc)}
+                data-ocid={`service-book-${svc.type.toLowerCase()}`}
+              >
+                Request Service
+              </Button>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* ─── Booking Modal ───────────────────────────────────────────────── */}
+      <Dialog
+        open={!!bookingService}
+        onOpenChange={(o) => !o && closeBooking()}
+      >
+        <DialogContent className="max-w-sm max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span aria-hidden="true">{bookingService?.emoji}</span>
+              {bookingService?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            {/* Info banner inside modal */}
+            <div className="flex items-start gap-2 bg-primary/8 border border-primary/20 rounded-lg px-3 py-2">
+              <Info size={13} className="text-primary flex-none mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This service will be carried out within Assam. You can book from
+                anywhere in the world.
+              </p>
+            </div>
+
+            {/* Service type (read-only display) */}
+            <div className="bg-muted/50 rounded-lg px-3 py-2">
+              <p className="text-xs text-muted-foreground">Service Type</p>
+              <p className="text-sm font-semibold text-foreground">
+                {bookingService?.title}
+              </p>
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="svc-name" className="text-xs font-semibold">
+                Your Full Name *
+              </Label>
+              <Input
+                id="svc-name"
+                value={form.userName}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, userName: e.target.value }))
+                }
+                placeholder="Your full name"
+                className="h-9 text-sm"
+                data-ocid="service-form-name"
+              />
+              {fieldError("userName")}
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <Label htmlFor="svc-phone" className="text-xs font-semibold">
+                Your Phone Number *
+              </Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground bg-muted border border-input rounded-md px-3 h-9 flex items-center">
+                  +91
+                </span>
+                <Input
+                  id="svc-phone"
+                  type="tel"
+                  value={form.userPhone}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, userPhone: e.target.value }))
+                  }
+                  placeholder="10-digit mobile number"
+                  className="h-9 text-sm flex-1"
+                  maxLength={10}
+                  data-ocid="service-form-phone"
+                />
+              </div>
+              {fieldError("userPhone")}
+            </div>
+
+            {/* Date & Time */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="svc-date" className="text-xs font-semibold">
+                  Preferred Date *
+                </Label>
+                <Input
+                  id="svc-date"
+                  type="date"
+                  min={todayStr()}
+                  value={form.preferredDate}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, preferredDate: e.target.value }))
+                  }
+                  className="h-9 text-sm"
+                  data-ocid="service-form-date"
+                />
+                {fieldError("preferredDate")}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="svc-time" className="text-xs font-semibold">
+                  Preferred Time *
+                </Label>
+                <Input
+                  id="svc-time"
+                  type="time"
+                  value={form.preferredTime}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, preferredTime: e.target.value }))
+                  }
+                  className="h-9 text-sm"
+                  data-ocid="service-form-time"
+                />
+                {fieldError("preferredTime")}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="svc-description"
+                className="text-xs font-semibold"
+              >
+                Describe What You Need *
+              </Label>
+              <Textarea
+                id="svc-description"
+                value={form.description}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, description: e.target.value }))
+                }
+                placeholder="Describe what you need in detail…"
+                className="text-sm resize-none"
+                rows={3}
+                data-ocid="service-form-description"
+              />
+              {fieldError("description")}
+            </div>
+
+            {/* ── Service Recipient Section ─────────────────────────────── */}
+            <div className="border border-border rounded-xl p-3 space-y-3 bg-muted/20">
+              <div className="flex items-start gap-2.5">
+                <Checkbox
+                  id="svc-for-others"
+                  checked={!form.isRequestForSelf}
+                  onCheckedChange={(checked) =>
+                    setForm((p) => ({
+                      ...p,
+                      isRequestForSelf: !checked,
+                      recipientName: "",
+                      recipientPhone: "",
+                      recipientAddress: "",
+                    }))
+                  }
+                  data-ocid="service-form-for-others"
+                />
+                <Label
+                  htmlFor="svc-for-others"
+                  className="text-xs font-semibold leading-tight cursor-pointer"
+                >
+                  I am requesting this service for someone else in Assam
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    Tick this if you're outside Assam and want to help someone
+                    there
+                  </span>
+                </Label>
+              </div>
+
+              {/* Recipient fields — shown only when booking for someone else */}
+              {!form.isRequestForSelf && (
+                <div className="space-y-3 pt-1 border-t border-border/60">
+                  <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                    <span>👤</span> Service Recipient Details
+                  </p>
+
+                  {/* Recipient Name */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="svc-recipient-name"
+                      className="text-xs font-semibold"
+                    >
+                      Recipient Full Name *
+                    </Label>
+                    <Input
+                      id="svc-recipient-name"
+                      value={form.recipientName}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          recipientName: e.target.value,
+                        }))
+                      }
+                      placeholder="Name of the person in Assam"
+                      className="h-9 text-sm"
+                      data-ocid="service-form-recipient-name"
+                    />
+                    {fieldError("recipientName")}
+                  </div>
+
+                  {/* Recipient Phone */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="svc-recipient-phone"
+                      className="text-xs font-semibold"
+                    >
+                      Recipient Phone Number *
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground bg-muted border border-input rounded-md px-3 h-9 flex items-center">
+                        +91
+                      </span>
+                      <Input
+                        id="svc-recipient-phone"
+                        type="tel"
+                        value={form.recipientPhone}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            recipientPhone: e.target.value,
+                          }))
+                        }
+                        placeholder="10-digit mobile number"
+                        className="h-9 text-sm flex-1"
+                        maxLength={10}
+                        data-ocid="service-form-recipient-phone"
+                      />
+                    </div>
+                    {fieldError("recipientPhone")}
+                  </div>
+
+                  {/* Recipient Address */}
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="svc-recipient-address"
+                      className="text-xs font-semibold"
+                    >
+                      Recipient Address in Assam{" "}
+                      <span className="font-normal text-muted-foreground">
+                        (optional)
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="svc-recipient-address"
+                      value={form.recipientAddress}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          recipientAddress: e.target.value,
+                        }))
+                      }
+                      placeholder="Street, village, town, district in Assam…"
+                      className="text-sm resize-none"
+                      rows={2}
+                      data-ocid="service-form-recipient-address"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {backendError && (
+              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+                <AlertTriangle
+                  size={14}
+                  className="text-destructive flex-none"
+                />
+                <p className="text-xs text-destructive">{backendError}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeBooking}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              className="btn-primary border-0"
+              disabled={submitting || !actor}
+              data-ocid="service-form-submit"
+            >
+              {submitting ? "Submitting…" : "Submit Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Success Modal ───────────────────────────────────────────────── */}
+      <Dialog
+        open={!!successRequest}
+        onOpenChange={(o) => !o && setSuccessRequest(null)}
+      >
+        <DialogContent className="max-w-sm text-center">
+          <div className="py-4 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 bg-secondary/15 rounded-full flex items-center justify-center">
+              <CheckCircle2 size={36} className="text-secondary" />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-black text-foreground mb-1">
+                Request Submitted!
+              </h2>
+              {successRecipientName ? (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Your request for{" "}
+                  <span className="font-semibold text-foreground">
+                    {successRecipientName}
+                  </span>{" "}
+                  has been submitted. Our team will contact them in Assam
+                  shortly.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Your service request has been submitted. Our team will contact
+                  you shortly.
+                </p>
+              )}
+            </div>
+            {successRequest && (
+              <div className="w-full bg-muted/50 rounded-xl p-4 space-y-2 text-left">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Reference #
+                  </span>
+                  <span className="text-xs font-bold text-primary">
+                    SR-{successRequest.id.toString().padStart(4, "0")}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Service</span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {successService}
+                  </span>
+                </div>
+                {successRecipientName && (
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      Recipient
+                    </span>
+                    <span className="text-xs font-semibold text-foreground">
+                      {successRecipientName}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Submitted
+                  </span>
+                  <span className="text-xs text-foreground">
+                    {new Date(
+                      Number(successRequest.submittedAt) / 1_000_000,
+                    ).toLocaleDateString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Status</span>
+                  <Badge className="text-[10px] bg-primary/10 text-primary border-0 px-2 py-0.5 h-auto">
+                    New
+                  </Badge>
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            onClick={() => setSuccessRequest(null)}
+            className="w-full btn-primary border-0"
+            data-ocid="service-success-done"
+          >
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

@@ -17,63 +17,63 @@ const CATEGORIES: Category[] = [
   {
     id: 1n,
     name: "Assam Tea",
-    slug: "tea",
+    slug: "assam-tea",
     description: "Premium Tea",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 2n,
-    name: "Spices",
-    slug: "spices",
+    id: 3n,
+    name: "Spices & Herbs",
+    slug: "spices-herbs",
     description: "Assam Spices",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 3n,
+    id: 6n,
     name: "Handloom",
-    slug: "handloom",
+    slug: "handloom-textiles",
     description: "Handloom Weaves",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 4n,
-    name: "Crafts",
-    slug: "crafts",
+    id: 7n,
+    name: "Handicrafts",
+    slug: "handicrafts",
     description: "Bamboo & Cane",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 5n,
-    name: "Food",
-    slug: "food",
+    id: 2n,
+    name: "Assamese Food",
+    slug: "assamese-food",
     description: "Regional Foods",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 6n,
+    id: 9n,
     name: "Books",
-    slug: "books",
+    slug: "books-literature",
     description: "Books & Culture",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 7n,
+    id: 5n,
     name: "Attire",
-    slug: "attire",
+    slug: "assamese-attire",
     description: "Assamese Attire",
     imageUrl: "",
     subCategories: [],
   },
   {
-    id: 8n,
+    id: 14n,
     name: "Kitchen",
-    slug: "kitchen",
+    slug: "kitchen-cookware",
     description: "Kitchenware",
     imageUrl: "",
     subCategories: [],
@@ -89,7 +89,7 @@ const HERO_BANNERS = [
     title: "Fresh from Assam's\nTea Gardens",
     subtitle: "Up to 20% off on premium orthodox teas this season",
     cta: "Shop Teas",
-    slug: "tea",
+    slug: "assam-tea",
   },
   {
     id: 2,
@@ -99,7 +99,7 @@ const HERO_BANNERS = [
     title: "Authentic Assamese\nSilk & Weaves",
     subtitle: "Celebrate the art of Mekhela Chador & Muga silk",
     cta: "Explore Handloom",
-    slug: "handloom",
+    slug: "handloom-textiles",
   },
   {
     id: 3,
@@ -109,7 +109,7 @@ const HERO_BANNERS = [
     title: "Authentic Assamese\nKitchen & Spices",
     subtitle: "Clay cookware, Bhut Jolokia & traditional flavours",
     cta: "Shop Now",
-    slug: "kitchen",
+    slug: "kitchen-cookware",
   },
 ];
 
@@ -377,25 +377,25 @@ const NEW_ARRIVAL_PRODUCTS: Product[] = [
 
 const SHOP_BY_CATEGORY_FEATURED = [
   {
-    slug: "tea",
+    slug: "assam-tea",
     name: "Assam Tea",
     image: "/assets/generated/category-tea.dim_400x400.jpg",
     tag: "Bestseller",
   },
   {
-    slug: "handloom",
+    slug: "handloom-textiles",
     name: "Handloom",
     image: "/assets/generated/category-handloom.dim_400x400.jpg",
     tag: "Trending",
   },
   {
-    slug: "spices",
+    slug: "spices-herbs",
     name: "Spices",
     image: "/assets/generated/category-spices.dim_400x400.jpg",
     tag: "Hot 🌶️",
   },
   {
-    slug: "crafts",
+    slug: "handicrafts",
     name: "Handicrafts",
     image: "/assets/generated/category-crafts.dim_400x400.jpg",
     tag: "Handmade",
@@ -629,7 +629,7 @@ function HorizontalProductRow({
 function PromoBanner() {
   return (
     <div className="mx-4" data-ocid="promo-banner">
-      <Link to="/categories/$slug" params={{ slug: "tea" }}>
+      <Link to="/categories/$slug" params={{ slug: "assam-tea" }}>
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-border">
           <img
             src="/assets/generated/promo-tea-collection.dim_900x300.jpg"

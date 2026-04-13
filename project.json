@@ -1,23 +1,25 @@
 {
-  "overview": "AssamRoots is an Assamese-first e-commerce platform for discovering and purchasing authentic Assamese products — including tea, food, handloom, handicrafts, books, and more. Inspired by Flipkart and Blinkit for fast browsing and easy checkout, the platform serves Assamese users in Assam, across India, and abroad.",
+  "overview": "AssamRoots is an Assamese-first commerce platform connecting the Assamese diaspora worldwide with authentic products from Assam. Features a full product catalog organized by category and sub-category, location-aware checkout disclaimers, and a Coming Soon services page targeted at residents inside Assam.",
   "features": [
-    "Product discovery with category-led browsing and search",
-    "Cart management and Stripe checkout",
-    "Order tracking and delivery confirmation",
-    "User accounts via Internet Identity",
-    "Admin product management with image upload",
-    "Services Coming Soon page",
-    "Mobile-first responsive design with Assamese branding"
+    "15 product categories with full sub-category navigation",
+    "Sub-cultural apparel (Assamese, Boro, Mising, Karbi)",
+    "Location-aware disclaimer banner at checkout (India vs Abroad)",
+    "Mandatory disclaimer acceptance before payment",
+    "Assam-only Services Coming Soon page with 10 teaser cards",
+    "Product discovery with search, filters, and category tiles",
+    "Cart, checkout, and Stripe payment integration",
+    "Order tracking and admin discount management"
   ],
   "category": "ecommerce",
   "tags": [
-    "ecommerce",
-    "assamese",
-    "products",
-    "shopping",
+    "assam",
     "india",
-    "catalog",
-    "community"
+    "ecommerce",
+    "cultural",
+    "diaspora",
+    "products",
+    "handicrafts",
+    "commerce"
   ],
-  "last_updated": "2026-04-11T12:46:22.013Z"
+  "last_updated": "2026-04-12T17:40:26.495Z"
 }

@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +9,7 @@ import { useCart } from "@/hooks/useCart";
 import { discountedPrice, formatPrice } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   MapPin,
@@ -68,6 +70,91 @@ function validateForm(form: FormState): FormErrors {
 }
 
 type PincodeStatus = "idle" | "checking" | "serviceable" | "not-serviceable";
+type DisclaimerType = "none" | "india" | "international";
+
+// Well-known international location keywords (case-insensitive)
+const INTERNATIONAL_KEYWORDS = new Set([
+  "abroad",
+  "usa",
+  "uk",
+  "united kingdom",
+  "united states",
+  "canada",
+  "australia",
+  "uae",
+  "dubai",
+  "singapore",
+  "malaysia",
+  "germany",
+  "france",
+  "italy",
+  "netherlands",
+  "sweden",
+  "norway",
+  "denmark",
+  "switzerland",
+  "new zealand",
+  "japan",
+  "china",
+  "south korea",
+  "hong kong",
+  "qatar",
+  "kuwait",
+  "bahrain",
+  "saudi arabia",
+  "oman",
+]);
+
+// Valid Indian states (case-insensitive match used)
+const INDIAN_STATES = new Set([
+  "andhra pradesh",
+  "arunachal pradesh",
+  "assam",
+  "bihar",
+  "chhattisgarh",
+  "goa",
+  "gujarat",
+  "haryana",
+  "himachal pradesh",
+  "jharkhand",
+  "karnataka",
+  "kerala",
+  "madhya pradesh",
+  "maharashtra",
+  "manipur",
+  "meghalaya",
+  "mizoram",
+  "nagaland",
+  "odisha",
+  "punjab",
+  "rajasthan",
+  "sikkim",
+  "tamil nadu",
+  "telangana",
+  "tripura",
+  "uttar pradesh",
+  "uttarakhand",
+  "west bengal",
+  "delhi",
+  "jammu and kashmir",
+  "ladakh",
+  "chandigarh",
+  "puducherry",
+  "andaman and nicobar",
+  "dadra and nagar haveli",
+  "daman and diu",
+  "lakshadweep",
+]);
+
+function getDisclaimerType(stateValue: string): DisclaimerType {
+  const normalized = stateValue.trim().toLowerCase();
+  if (!normalized) return "none";
+  if (normalized === "assam") return "none";
+  if (INTERNATIONAL_KEYWORDS.has(normalized)) return "international";
+  if (INDIAN_STATES.has(normalized)) return "india";
+  // Default: treat unrecognised non-empty values as international
+  return "international";
+}
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice } = useCart();
@@ -88,6 +175,9 @@ export default function CheckoutPage() {
     Partial<Record<keyof FormState, boolean>>
   >({});
   const [pincodeStatus, setPincodeStatus] = useState<PincodeStatus>("idle");
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+
+  const disclaimerType = getDisclaimerType(form.state);
 
   const shipping = totalPrice >= 49900 ? 0 : 5900;
   const grandTotal = totalPrice + shipping;
@@ -113,6 +203,8 @@ export default function CheckoutPage() {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
       // Clear error on change
       if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+      // Reset disclaimer acceptance when the state field changes
+      if (field === "state") setDisclaimerAccepted(false);
     };
   }
 
@@ -135,6 +227,7 @@ export default function CheckoutPage() {
     setErrors(fieldErrors);
     if (Object.keys(fieldErrors).length > 0) return;
     if (pincodeStatus === "not-serviceable") return;
+    if (disclaimerType !== "none" && !disclaimerAccepted) return;
 
     // Persist address data to sessionStorage for PaymentPage
     sessionStorage.setItem("checkout_address", JSON.stringify(form));
@@ -476,12 +569,55 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Location-aware Disclaimer Banner */}
+          {disclaimerType !== "none" && (
+            <section
+              className="bg-amber-50 border border-amber-300 rounded-xl p-4 space-y-3"
+              data-ocid="checkout-disclaimer-banner"
+              aria-label="Shipping disclaimer"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle
+                  size={18}
+                  className="text-amber-600 flex-none mt-0.5"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-bold text-amber-900">
+                  Important Shipping Notice
+                </p>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                {disclaimerType === "india"
+                  ? "Orders from outside Assam may take 5–10 business days due to inter-state logistics and availability at the time of dispatch. We will notify you if any item is unavailable for export."
+                  : "International orders may take 15–30 business days. Export availability depends on customs regulations. Certain items (food, herbs, liquids) may be restricted for international shipment. We will notify you if any adjustment is needed before dispatch."}
+              </p>
+              <div className="flex items-start gap-2.5 pt-1">
+                <Checkbox
+                  id="disclaimer-accept"
+                  checked={disclaimerAccepted}
+                  onCheckedChange={(checked) =>
+                    setDisclaimerAccepted(checked === true)
+                  }
+                  className="mt-0.5 border-amber-500 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  data-ocid="checkout-disclaimer-checkbox"
+                />
+                <Label
+                  htmlFor="disclaimer-accept"
+                  className="text-xs text-amber-900 font-medium leading-relaxed cursor-pointer"
+                >
+                  I understand and accept the above shipping terms
+                </Label>
+              </div>
+            </section>
+          )}
+
           <Button
             type="submit"
             className="w-full btn-primary border-0 h-12 text-base font-bold flex items-center justify-center gap-2"
             disabled={
               pincodeStatus === "not-serviceable" ||
-              pincodeStatus === "checking"
+              pincodeStatus === "checking" ||
+              (disclaimerType !== "none" && !disclaimerAccepted)
             }
             data-ocid="checkout-submit"
           >

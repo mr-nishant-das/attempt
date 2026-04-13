@@ -1,4 +1,4 @@
-// Version: 1.0.0
+// Version: 3.0.0
 type Address__274428118 =
   {
     city : Text;
@@ -39,8 +39,47 @@ type DeliveryAddress__677077764 =
     pincode : Text;
     state : Text
   };
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
 type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
+type OldServiceRequestStatus__786956769 =
+  {#Cancelled; #Completed; #Contacted; #New};
+type OldServiceRequest__585271488 =
+  {
+    description : Text;
+    id : Nat;
+    var lastUpdatedAt : Int;
+    preferredDate : Text;
+    preferredTime : Text;
+    serviceType : OldServiceType__1063359608;
+    var status : OldServiceRequestStatus__786956769;
+    submittedAt : Int;
+    userId : Text;
+    userName : Text;
+    userPhone : Text
+  };
+type OldServiceType__1063359608 =
+  {
+    #Ambulance;
+    #Doctors;
+    #EventManagement;
+    #FoodDelivery;
+    #FuneralServices;
+    #Gifting;
+    #Medicines;
+    #Other;
+    #SchoolAdmissions;
+    #Taxi;
+    #Tourism;
+    #VideoConferencing;
+    #WeddingsAnniversaries
+  };
 type OrderId__521176343 = Nat;
 type OrderItem__241319351 =
   {
@@ -95,6 +134,43 @@ type Product__151866168 =
     title : Text;
     updatedAt : Int
   };
+type ServiceRequestStatus__38177884 =
+  {#Cancelled; #Completed; #Contacted; #New};
+type ServiceRequest__43766594 = ServiceRequest__859040472;
+type ServiceRequest__859040472 =
+  {
+    description : Text;
+    id : Nat;
+    isRequestForSelf : Bool;
+    var lastUpdatedAt : Int;
+    preferredDate : Text;
+    preferredTime : Text;
+    recipientAddress : ?Text;
+    recipientName : ?Text;
+    recipientPhone : ?Text;
+    serviceType : ServiceType__390865354;
+    var status : ServiceRequestStatus__38177884;
+    submittedAt : Int;
+    userId : Text;
+    userName : Text;
+    userPhone : Text
+  };
+type ServiceType__390865354 =
+  {
+    #Ambulance;
+    #Doctors;
+    #EventManagement;
+    #FoodDelivery;
+    #FuneralServices;
+    #Gifting;
+    #Medicines;
+    #Other;
+    #SchoolAdmissions;
+    #Taxi;
+    #Tourism;
+    #VideoConferencing;
+    #WeddingsAnniversaries
+  };
 type ShipmentUpdate__973262024 =
   {message : Text; status : OrderStatus__272730104; timestamp : Int};
 type UserId__1043627770 = Principal;
@@ -110,7 +186,7 @@ type UserProfile__277265826 =
     var phone : Text;
     var updatedAt : Int
   };
-actor {
+actor ({
   stable carts :
     {
       var blockIndex : Nat__490723111;
@@ -126,6 +202,7 @@ actor {
   stable var nextCategoryId : Nat;
   stable var nextOrderId : Nat;
   stable var nextProductId : Nat;
+  stable var nextServiceRequestId : Nat;
   stable orders :
     {
       var blockIndex : Nat__490723111;
@@ -138,10 +215,52 @@ actor {
       var blocks : [var [var ?Product__1036577220]];
       var elementIndex : Nat__490723111
     };
+  in serviceRequests : List__415060402<OldServiceRequest__585271488>;
   stable users :
     {
       var blockIndex : Nat__490723111;
       var blocks : [var [var ?UserProfile__104081004]];
       var elementIndex : Nat__490723111
     }
-};
+}, {
+  stable carts :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Cart__839558991]];
+      var elementIndex : Nat__490723111
+    };
+  stable categories :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Category__738961406]];
+      var elementIndex : Nat__490723111
+    };
+  stable var nextCategoryId : Nat;
+  stable var nextOrderId : Nat;
+  stable var nextProductId : Nat;
+  stable var nextServiceRequestId : Nat;
+  stable orders :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Order__645163560]];
+      var elementIndex : Nat__490723111
+    };
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__1036577220]];
+      var elementIndex : Nat__490723111
+    };
+  stable serviceRequests :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?ServiceRequest__43766594]];
+      var elementIndex : Nat__490723111
+    };
+  stable users :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?UserProfile__104081004]];
+      var elementIndex : Nat__490723111
+    }
+}) ;

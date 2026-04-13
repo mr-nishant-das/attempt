@@ -43,6 +43,18 @@ export interface CreateOrderInput {
   'deliveryAddress' : DeliveryAddress,
   'items' : Array<{ 'productId' : bigint, 'quantity' : bigint }>,
 }
+export interface CreateServiceRequestInput {
+  'userName' : string,
+  'serviceType' : ServiceType,
+  'recipientPhone' : [] | [string],
+  'description' : string,
+  'userPhone' : string,
+  'isRequestForSelf' : boolean,
+  'preferredDate' : string,
+  'preferredTime' : string,
+  'recipientAddress' : [] | [string],
+  'recipientName' : [] | [string],
+}
 export interface DeliveryAddress {
   'city' : string,
   'name' : string,
@@ -125,6 +137,40 @@ export interface ProductListResult {
   'total' : bigint,
   'products' : Array<Product>,
 }
+export interface ServiceRequestPublic {
+  'id' : bigint,
+  'status' : ServiceRequestStatus,
+  'userName' : string,
+  'serviceType' : ServiceType,
+  'userId' : string,
+  'recipientPhone' : [] | [string],
+  'submittedAt' : bigint,
+  'description' : string,
+  'userPhone' : string,
+  'lastUpdatedAt' : bigint,
+  'isRequestForSelf' : boolean,
+  'preferredDate' : string,
+  'preferredTime' : string,
+  'recipientAddress' : [] | [string],
+  'recipientName' : [] | [string],
+}
+export type ServiceRequestStatus = { 'New' : null } |
+  { 'Contacted' : null } |
+  { 'Cancelled' : null } |
+  { 'Completed' : null };
+export type ServiceType = { 'Ambulance' : null } |
+  { 'FoodDelivery' : null } |
+  { 'Taxi' : null } |
+  { 'SchoolAdmissions' : null } |
+  { 'Medicines' : null } |
+  { 'Gifting' : null } |
+  { 'FuneralServices' : null } |
+  { 'Tourism' : null } |
+  { 'Doctors' : null } |
+  { 'VideoConferencing' : null } |
+  { 'EventManagement' : null } |
+  { 'WeddingsAnniversaries' : null } |
+  { 'Other' : null };
 export interface ShipmentUpdate {
   'status' : OrderStatus,
   'message' : string,
@@ -151,7 +197,9 @@ export interface _SERVICE {
   'addToCart' : ActorMethod<[bigint, bigint], CartPublic>,
   'adminAddProduct' : ActorMethod<[ProductInput], Product>,
   'adminDeleteProduct' : ActorMethod<[ProductId], boolean>,
+  'adminDeleteServiceRequest' : ActorMethod<[bigint], boolean>,
   'adminGetAllOrders' : ActorMethod<[bigint, bigint], Array<OrderPublic>>,
+  'adminGetServiceRequests' : ActorMethod<[], Array<ServiceRequestPublic>>,
   'adminSetDiscount' : ActorMethod<[ProductId, bigint], [] | [Product]>,
   'adminSetUserAdmin' : ActorMethod<[Principal, boolean], boolean>,
   'adminUpdateOrderStatus' : ActorMethod<
@@ -159,6 +207,10 @@ export interface _SERVICE {
     [] | [OrderPublic]
   >,
   'adminUpdateProduct' : ActorMethod<[ProductId, ProductInput], [] | [Product]>,
+  'adminUpdateServiceRequestStatus' : ActorMethod<
+    [bigint, ServiceRequestStatus],
+    [] | [ServiceRequestPublic]
+  >,
   'adminUpdateStock' : ActorMethod<[ProductId, bigint], [] | [Product]>,
   'claimAdminIfFirst' : ActorMethod<[], boolean>,
   'clearMyCart' : ActorMethod<[], undefined>,
@@ -179,6 +231,10 @@ export interface _SERVICE {
   >,
   'removeFromCart' : ActorMethod<[bigint], CartPublic>,
   'searchProducts' : ActorMethod<[string, bigint, bigint], ProductListResult>,
+  'submitServiceRequest' : ActorMethod<
+    [CreateServiceRequestInput],
+    ServiceRequestPublic
+  >,
   'updateCartItem' : ActorMethod<[bigint, bigint], CartPublic>,
   'updateMyProfile' : ActorMethod<[UserProfileInput], UserProfilePublic>,
 }
