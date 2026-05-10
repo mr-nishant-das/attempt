@@ -18,8 +18,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useServicesAvailability } from "@/hooks/useQueries";
 import { useActor } from "@caffeineai/core-infrastructure";
-import { AlertTriangle, CheckCircle2, Globe, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Globe, Info } from "lucide-react";
 import { useState } from "react";
 
 // ─── Service definitions ─────────────────────────────────────────────────────
@@ -168,6 +169,7 @@ const BLANK_FORM: BookingForm = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ServicesPage() {
   const { actor, isFetching: actorFetching } = useActor(createActor);
+  const { data: servicesAvailability } = useServicesAvailability();
 
   // Booking modal
   const [bookingService, setBookingService] = useState<ServiceDef | null>(null);
@@ -265,6 +267,29 @@ export default function ServicesPage() {
   return (
     <Layout>
       <div className="px-4 py-4 pb-24" data-ocid="services-page">
+        {/* Services unavailability banner — shown when admin has disabled services */}
+        {servicesAvailability && !servicesAvailability.available && (
+          <div
+            className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-4 mb-5"
+            role="alert"
+            data-ocid="services-unavailable-banner"
+          >
+            <Clock size={20} className="text-amber-600 flex-none mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-900 leading-tight">
+                Services Temporarily Unavailable
+              </p>
+              <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                {servicesAvailability.message ||
+                  "Our community services are currently paused."}
+              </p>
+              <p className="text-xs text-amber-700 mt-1.5 font-medium">
+                🔔 Services will resume soon — check back later.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Page header */}
         <div className="mb-4">
           <h1 className="font-display text-2xl font-black text-foreground tracking-tight">
@@ -298,33 +323,40 @@ export default function ServicesPage() {
           {SERVICES.map((svc) => (
             <div
               key={svc.type}
-              className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 transition-smooth hover:border-primary/30 hover:shadow-sm"
+              className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 transition-smooth hover:border-primary/30 hover:shadow-sm overflow-hidden"
               data-ocid={`service-card-${svc.type.toLowerCase()}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 min-w-0">
                 <div
                   className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-none ${svc.color}`}
                   aria-hidden="true"
                 >
                   {svc.emoji}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground leading-tight">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="font-semibold text-sm text-foreground leading-tight truncate">
                     {svc.title}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2 break-words">
                     {svc.desc}
                   </p>
                 </div>
               </div>
               <Button
                 size="sm"
-                className="w-full h-9 text-xs font-semibold btn-primary border-0"
-                disabled={actorFetching}
+                className="w-full h-9 text-xs font-semibold btn-primary border-0 flex-none"
+                disabled={
+                  actorFetching ||
+                  (servicesAvailability
+                    ? !servicesAvailability.available
+                    : false)
+                }
                 onClick={() => openBooking(svc)}
                 data-ocid={`service-book-${svc.type.toLowerCase()}`}
               >
-                Request Service
+                {servicesAvailability && !servicesAvailability.available
+                  ? "Currently Unavailable"
+                  : "Request Service"}
               </Button>
             </div>
           ))}

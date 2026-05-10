@@ -446,11 +446,14 @@ export default function OrderTrackingPage() {
             {order.deliveryAddress.name}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {order.deliveryAddress.line1}
+            {order.deliveryAddress.houseNo}, {order.deliveryAddress.street}
           </p>
-          {order.deliveryAddress.line2 && (
+          {order.deliveryAddress.locality && (
             <p className="text-xs text-muted-foreground">
-              {order.deliveryAddress.line2}
+              {order.deliveryAddress.locality}
+              {order.deliveryAddress.landmark
+                ? `, near ${order.deliveryAddress.landmark}`
+                : ""}
             </p>
           )}
           <p className="text-xs text-muted-foreground">

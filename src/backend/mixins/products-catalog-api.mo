@@ -12,6 +12,7 @@ mixin (
 
   stable var nextProductId : Nat = 1;
   stable var nextCategoryId : Nat = 1;
+  stable var nextSubCategoryId : Nat = 1;
 
   // ---- Category API ----
 
@@ -91,6 +92,85 @@ mixin (
   public shared ({ caller }) func adminUpdateStock(id : ProductLib.ProductId, newStock : Nat) : async ?ProductLib.Product {
     if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
     ProductLib.updateStock(products, id, newStock);
+  };
+
+  // ---- Admin Category API ----
+
+  public shared query ({ caller }) func adminGetCategories() : async [ProductLib.Category] {
+    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    ProductLib.listCategories(categories);
+  };
+
+  public shared ({ caller }) func adminAddCategory(
+    name : Text,
+    slug : Text,
+    description : Text,
+    imageUrl : Text,
+  ) : async { #ok : ProductLib.Category; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    let cat = ProductLib.addCategory(categories, nextCategoryId, name, slug, description, imageUrl);
+    nextCategoryId += 1;
+    #ok(cat);
+  };
+
+  public shared ({ caller }) func adminUpdateCategory(
+    id : ProductLib.CategoryId,
+    name : Text,
+    slug : Text,
+    description : Text,
+    imageUrl : Text,
+  ) : async { #ok : ProductLib.Category; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    switch (ProductLib.updateCategory(categories, id, name, slug, description, imageUrl)) {
+      case (?cat) { #ok(cat) };
+      case null { #err("Category not found") };
+    };
+  };
+
+  public shared ({ caller }) func adminDeleteCategory(
+    id : ProductLib.CategoryId,
+  ) : async { #ok : Bool; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    let deleted = ProductLib.deleteCategory(categories, id);
+    if (deleted) { #ok(true) } else { #err("Category not found") };
+  };
+
+  // ---- Admin SubCategory API ----
+
+  public shared ({ caller }) func adminAddSubCategory(
+    categoryId : ProductLib.CategoryId,
+    name : Text,
+    imageUrl : Text,
+  ) : async { #ok : ProductLib.Category; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    switch (ProductLib.addSubCategory(categories, categoryId, nextSubCategoryId, name, imageUrl)) {
+      case (?cat) { nextSubCategoryId += 1; #ok(cat) };
+      case null { #err("Category not found") };
+    };
+  };
+
+  public shared ({ caller }) func adminUpdateSubCategory(
+    categoryId : ProductLib.CategoryId,
+    subCategoryId : ProductLib.SubCategoryId,
+    name : Text,
+    imageUrl : Text,
+  ) : async { #ok : ProductLib.Category; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    switch (ProductLib.updateSubCategory(categories, categoryId, subCategoryId, name, imageUrl)) {
+      case (?cat) { #ok(cat) };
+      case null { #err("Category or subcategory not found") };
+    };
+  };
+
+  public shared ({ caller }) func adminDeleteSubCategory(
+    categoryId : ProductLib.CategoryId,
+    subCategoryId : ProductLib.SubCategoryId,
+  ) : async { #ok : ProductLib.Category; #err : Text } {
+    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    switch (ProductLib.deleteSubCategory(categories, categoryId, subCategoryId)) {
+      case (?cat) { #ok(cat) };
+      case null { #err("Category or subcategory not found") };
+    };
   };
 
 };

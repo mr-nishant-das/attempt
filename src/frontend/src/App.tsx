@@ -26,6 +26,7 @@ const OrderCompletePage = lazy(() => import("./pages/OrderCompletePage"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
 // ─── Page loader ───────────────────────────────────────────────────────────
 function PageLoader() {
@@ -160,6 +161,12 @@ const servicesRoute = createRoute({
   component: ServicesPage,
 });
 
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: ProfilePage,
+});
+
 // ─── Router ────────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -179,6 +186,7 @@ const routeTree = rootRoute.addChildren([
   ordersRoute,
   adminRoute,
   servicesRoute,
+  profileRoute,
 ]);
 
 const router = createRouter({ routeTree });

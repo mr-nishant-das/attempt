@@ -4,7 +4,7 @@ import {
   Home,
   Search,
   ShoppingCart,
-  User,
+  UserCircle,
   Wrench,
 } from "lucide-react";
 
@@ -44,10 +44,10 @@ const NAV_ITEMS = [
     ocid: "bottom-nav-cart",
   },
   {
-    label: "Account",
-    to: "/orders" as const,
-    icon: <User size={20} />,
-    ocid: "bottom-nav-account",
+    label: "Profile",
+    to: "/profile" as const,
+    icon: <UserCircle size={20} />,
+    ocid: "bottom-nav-profile",
   },
 ];
 
@@ -61,7 +61,7 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-[0_-2px_12px_rgba(0,0,0,0.08)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-[0_-2px_12px_rgba(0,0,0,0.08)] lg:hidden"
       aria-label="Main navigation"
       data-ocid="bottom-nav"
     >

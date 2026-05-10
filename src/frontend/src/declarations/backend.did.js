@@ -8,6 +8,17 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
+  'method' : IDL.Text,
+  'blob_hash' : IDL.Text,
+});
+export const _ImmutableObjectStorageRefillInformation = IDL.Record({
+  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const _ImmutableObjectStorageRefillResult = IDL.Record({
+  'success' : IDL.Opt(IDL.Bool),
+  'topped_up_amount' : IDL.Opt(IDL.Nat),
+});
 export const Address = IDL.Record({
   'city' : IDL.Text,
   'name' : IDL.Text,
@@ -40,6 +51,59 @@ export const CartPublic = IDL.Record({
   'items' : IDL.Vec(CartItem),
 });
 export const CategoryId = IDL.Nat;
+export const SubCategoryId = IDL.Nat;
+export const SubCategory = IDL.Record({
+  'id' : SubCategoryId,
+  'name' : IDL.Text,
+  'imageUrl' : IDL.Text,
+});
+export const Category = IDL.Record({
+  'id' : CategoryId,
+  'name' : IDL.Text,
+  'slug' : IDL.Text,
+  'description' : IDL.Text,
+  'imageUrl' : IDL.Text,
+  'subCategories' : IDL.Vec(SubCategory),
+});
+export const FeaturedBlockInput = IDL.Record({
+  'title' : IDL.Text,
+  'content' : IDL.Text,
+  'thumbnailUrl' : IDL.Text,
+  'order' : IDL.Nat,
+  'isActive' : IDL.Bool,
+  'contentImages' : IDL.Vec(IDL.Text),
+});
+export const FeaturedBlockId = IDL.Nat;
+export const FeaturedBlock = IDL.Record({
+  'id' : FeaturedBlockId,
+  'title' : IDL.Text,
+  'content' : IDL.Text,
+  'thumbnailUrl' : IDL.Text,
+  'order' : IDL.Nat,
+  'createdAt' : IDL.Int,
+  'isActive' : IDL.Bool,
+  'contentImages' : IDL.Vec(IDL.Text),
+});
+export const HeroBannerInput = IDL.Record({
+  'title' : IDL.Text,
+  'order' : IDL.Nat,
+  'isActive' : IDL.Bool,
+  'imageUrl' : IDL.Text,
+  'ctaSlug' : IDL.Text,
+  'ctaText' : IDL.Text,
+  'subtitle' : IDL.Text,
+});
+export const HeroBannerId = IDL.Nat;
+export const HeroBanner = IDL.Record({
+  'id' : HeroBannerId,
+  'title' : IDL.Text,
+  'order' : IDL.Nat,
+  'isActive' : IDL.Bool,
+  'imageUrl' : IDL.Text,
+  'ctaSlug' : IDL.Text,
+  'ctaText' : IDL.Text,
+  'subtitle' : IDL.Text,
+});
 export const ProductInput = IDL.Record({
   'subCategory' : IDL.Text,
   'title' : IDL.Text,
@@ -83,18 +147,25 @@ export const OrderStatus = IDL.Variant({
   'OutForDelivery' : IDL.Null,
 });
 export const DeliveryAddress = IDL.Record({
+  'street' : IDL.Text,
   'city' : IDL.Text,
   'name' : IDL.Text,
-  'line1' : IDL.Text,
-  'line2' : IDL.Text,
+  'district' : IDL.Text,
   'state' : IDL.Text,
+  'landmark' : IDL.Text,
   'phone' : IDL.Text,
   'pincode' : IDL.Text,
+  'locality' : IDL.Text,
+  'houseNo' : IDL.Text,
 });
 export const ShipmentUpdate = IDL.Record({
   'status' : OrderStatus,
   'message' : IDL.Text,
   'timestamp' : IDL.Int,
+});
+export const DeliveryType = IDL.Variant({
+  'Standard' : IDL.Null,
+  'Express' : IDL.Null,
 });
 export const OrderItem = IDL.Record({
   'title' : IDL.Text,
@@ -109,9 +180,12 @@ export const OrderPublic = IDL.Record({
   'status' : OrderStatus,
   'deliveryAddress' : DeliveryAddress,
   'shipmentUpdates' : IDL.Vec(ShipmentUpdate),
+  'paymentMethod' : IDL.Text,
   'userId' : IDL.Principal,
   'createdAt' : IDL.Int,
   'estimatedDelivery' : IDL.Opt(IDL.Int),
+  'deliveryCost' : IDL.Nat,
+  'deliveryType' : DeliveryType,
   'updatedAt' : IDL.Int,
   'totalAmount' : IDL.Nat,
   'items' : IDL.Vec(OrderItem),
@@ -156,17 +230,12 @@ export const ServiceRequestPublic = IDL.Record({
 });
 export const CreateOrderInput = IDL.Record({
   'deliveryAddress' : DeliveryAddress,
+  'paymentMethod' : IDL.Text,
+  'deliveryCost' : IDL.Nat,
+  'deliveryType' : DeliveryType,
   'items' : IDL.Vec(
     IDL.Record({ 'productId' : IDL.Nat, 'quantity' : IDL.Nat })
   ),
-});
-export const Category = IDL.Record({
-  'id' : CategoryId,
-  'name' : IDL.Text,
-  'slug' : IDL.Text,
-  'description' : IDL.Text,
-  'imageUrl' : IDL.Text,
-  'subCategories' : IDL.Vec(IDL.Text),
 });
 export const ProductFilter = IDL.Record({
   'categoryId' : IDL.Opt(CategoryId),
@@ -180,6 +249,24 @@ export const ProductFilter = IDL.Record({
 export const ProductListResult = IDL.Record({
   'total' : IDL.Nat,
   'products' : IDL.Vec(Product),
+});
+export const http_header = IDL.Record({
+  'value' : IDL.Text,
+  'name' : IDL.Text,
+});
+export const http_request_result = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
+export const TransformationInput = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : http_request_result,
+});
+export const TransformationOutput = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
 });
 export const CreateServiceRequestInput = IDL.Record({
   'userName' : IDL.Text,
@@ -200,23 +287,107 @@ export const UserProfileInput = IDL.Record({
 });
 
 export const idlService = IDL.Service({
+  '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [IDL.Vec(IDL.Bool)],
+      ['query'],
+    ),
+  '_immutableObjectStorageBlobsToDelete' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [],
+      [],
+    ),
+  '_immutableObjectStorageCreateCertificate' : IDL.Func(
+      [IDL.Text],
+      [_ImmutableObjectStorageCreateCertificateResult],
+      [],
+    ),
+  '_immutableObjectStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+      [_ImmutableObjectStorageRefillResult],
+      [],
+    ),
+  '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   'addMyAddress' : IDL.Func([Address], [UserProfilePublic], []),
   'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
+  'adminAddCategory' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminAddFeaturedBlock' : IDL.Func([FeaturedBlockInput], [FeaturedBlock], []),
+  'adminAddHeroBanner' : IDL.Func([HeroBannerInput], [HeroBanner], []),
   'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
+  'adminAddSubCategory' : IDL.Func(
+      [CategoryId, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteCategory' : IDL.Func(
+      [CategoryId],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteFeaturedBlock' : IDL.Func(
+      [FeaturedBlockId],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteHeroBanner' : IDL.Func(
+      [HeroBannerId],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
   'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
   'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'adminDeleteSubCategory' : IDL.Func(
+      [CategoryId, SubCategoryId],
+      [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+      [],
+    ),
   'adminGetAllOrders' : IDL.Func(
       [IDL.Nat, IDL.Nat],
       [IDL.Vec(OrderPublic)],
       ['query'],
     ),
+  'adminGetCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'adminGetServiceRequests' : IDL.Func(
       [],
       [IDL.Vec(ServiceRequestPublic)],
       ['query'],
     ),
+  'adminListFeaturedBlocks' : IDL.Func([], [IDL.Vec(FeaturedBlock)], ['query']),
+  'adminListHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
+  'adminLogin' : IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Text)], []),
+  'adminLogout' : IDL.Func([IDL.Text], [], []),
+  'adminRegisterImageHash' : IDL.Func([IDL.Text], [IDL.Text], []),
+  'adminReorderHeroBanner' : IDL.Func(
+      [HeroBannerId, IDL.Nat],
+      [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
+      [],
+    ),
   'adminSetDiscount' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
   'adminSetUserAdmin' : IDL.Func([IDL.Principal, IDL.Bool], [IDL.Bool], []),
+  'adminUpdateCategory' : IDL.Func(
+      [CategoryId, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateFeaturedBlock' : IDL.Func(
+      [FeaturedBlockId, FeaturedBlockInput],
+      [IDL.Variant({ 'ok' : FeaturedBlock, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateHeroBanner' : IDL.Func(
+      [HeroBannerId, HeroBannerInput],
+      [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
+      [],
+    ),
   'adminUpdateOrderStatus' : IDL.Func(
       [OrderId, OrderStatus, IDL.Text],
       [IDL.Opt(OrderPublic)],
@@ -232,23 +403,94 @@ export const idlService = IDL.Service({
       [IDL.Opt(ServiceRequestPublic)],
       [],
     ),
+  'adminUpdateServicesAvailability' : IDL.Func([IDL.Bool, IDL.Text], [], []),
+  'adminUpdateSiteSettings' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+      [
+        IDL.Record({
+          'logoUrl' : IDL.Opt(IDL.Text),
+          'faviconUrl' : IDL.Opt(IDL.Text),
+        }),
+      ],
+      [],
+    ),
   'adminUpdateStock' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
+  'adminUpdateSubCategory' : IDL.Func(
+      [CategoryId, SubCategoryId, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateVideoByte' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
   'claimAdminIfFirst' : IDL.Func([], [IDL.Bool], []),
   'clearMyCart' : IDL.Func([], [], []),
   'createOrder' : IDL.Func([CreateOrderInput], [OrderPublic], []),
+  'createRazorpayOrder' : IDL.Func(
+      [IDL.Nat, IDL.Text],
+      [
+        IDL.Variant({
+          'ok' : IDL.Record({
+            'orderId' : IDL.Text,
+            'currency' : IDL.Text,
+            'amount' : IDL.Nat,
+          }),
+          'err' : IDL.Text,
+        }),
+      ],
+      [],
+    ),
   'getCategory' : IDL.Func([CategoryId], [IDL.Opt(Category)], ['query']),
   'getCategoryBySlug' : IDL.Func([IDL.Text], [IDL.Opt(Category)], ['query']),
+  'getFeaturedBlock' : IDL.Func(
+      [FeaturedBlockId],
+      [IDL.Opt(FeaturedBlock)],
+      ['query'],
+    ),
+  'getHeroBanner' : IDL.Func([HeroBannerId], [IDL.Opt(HeroBanner)], ['query']),
   'getMyCart' : IDL.Func([], [CartPublic], []),
   'getMyOrders' : IDL.Func([], [IDL.Vec(OrderPublic)], ['query']),
   'getMyProfile' : IDL.Func([], [UserProfilePublic], []),
   'getOrder' : IDL.Func([OrderId], [IDL.Opt(OrderPublic)], ['query']),
   'getProduct' : IDL.Func([ProductId], [IDL.Opt(Product)], ['query']),
+  'getServicesAvailability' : IDL.Func(
+      [],
+      [IDL.Record({ 'available' : IDL.Bool, 'message' : IDL.Text })],
+      ['query'],
+    ),
+  'getSiteSettings' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'logoUrl' : IDL.Opt(IDL.Text),
+          'faviconUrl' : IDL.Opt(IDL.Text),
+        }),
+      ],
+      ['query'],
+    ),
+  'getVideoByte' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'url' : IDL.Text,
+          'title' : IDL.Text,
+          'enabled' : IDL.Bool,
+        }),
+      ],
+      ['query'],
+    ),
+  'isAdminSession' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'isCurrentUserAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+  'listFeaturedBlocks' : IDL.Func([], [IDL.Vec(FeaturedBlock)], ['query']),
+  'listHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
   'listProducts' : IDL.Func([ProductFilter], [ProductListResult], ['query']),
   'listProductsByCategory' : IDL.Func(
       [CategoryId, IDL.Nat, IDL.Nat],
       [ProductListResult],
+      ['query'],
+    ),
+  'razorpayTransform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
       ['query'],
     ),
   'removeFromCart' : IDL.Func([IDL.Nat], [CartPublic], []),
@@ -264,11 +506,27 @@ export const idlService = IDL.Service({
     ),
   'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
   'updateMyProfile' : IDL.Func([UserProfileInput], [UserProfilePublic], []),
+  'verifyRazorpayPayment' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
+  const _ImmutableObjectStorageRefillInformation = IDL.Record({
+    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const _ImmutableObjectStorageRefillResult = IDL.Record({
+    'success' : IDL.Opt(IDL.Bool),
+    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  });
   const Address = IDL.Record({
     'city' : IDL.Text,
     'name' : IDL.Text,
@@ -301,6 +559,59 @@ export const idlFactory = ({ IDL }) => {
     'items' : IDL.Vec(CartItem),
   });
   const CategoryId = IDL.Nat;
+  const SubCategoryId = IDL.Nat;
+  const SubCategory = IDL.Record({
+    'id' : SubCategoryId,
+    'name' : IDL.Text,
+    'imageUrl' : IDL.Text,
+  });
+  const Category = IDL.Record({
+    'id' : CategoryId,
+    'name' : IDL.Text,
+    'slug' : IDL.Text,
+    'description' : IDL.Text,
+    'imageUrl' : IDL.Text,
+    'subCategories' : IDL.Vec(SubCategory),
+  });
+  const FeaturedBlockInput = IDL.Record({
+    'title' : IDL.Text,
+    'content' : IDL.Text,
+    'thumbnailUrl' : IDL.Text,
+    'order' : IDL.Nat,
+    'isActive' : IDL.Bool,
+    'contentImages' : IDL.Vec(IDL.Text),
+  });
+  const FeaturedBlockId = IDL.Nat;
+  const FeaturedBlock = IDL.Record({
+    'id' : FeaturedBlockId,
+    'title' : IDL.Text,
+    'content' : IDL.Text,
+    'thumbnailUrl' : IDL.Text,
+    'order' : IDL.Nat,
+    'createdAt' : IDL.Int,
+    'isActive' : IDL.Bool,
+    'contentImages' : IDL.Vec(IDL.Text),
+  });
+  const HeroBannerInput = IDL.Record({
+    'title' : IDL.Text,
+    'order' : IDL.Nat,
+    'isActive' : IDL.Bool,
+    'imageUrl' : IDL.Text,
+    'ctaSlug' : IDL.Text,
+    'ctaText' : IDL.Text,
+    'subtitle' : IDL.Text,
+  });
+  const HeroBannerId = IDL.Nat;
+  const HeroBanner = IDL.Record({
+    'id' : HeroBannerId,
+    'title' : IDL.Text,
+    'order' : IDL.Nat,
+    'isActive' : IDL.Bool,
+    'imageUrl' : IDL.Text,
+    'ctaSlug' : IDL.Text,
+    'ctaText' : IDL.Text,
+    'subtitle' : IDL.Text,
+  });
   const ProductInput = IDL.Record({
     'subCategory' : IDL.Text,
     'title' : IDL.Text,
@@ -344,18 +655,25 @@ export const idlFactory = ({ IDL }) => {
     'OutForDelivery' : IDL.Null,
   });
   const DeliveryAddress = IDL.Record({
+    'street' : IDL.Text,
     'city' : IDL.Text,
     'name' : IDL.Text,
-    'line1' : IDL.Text,
-    'line2' : IDL.Text,
+    'district' : IDL.Text,
     'state' : IDL.Text,
+    'landmark' : IDL.Text,
     'phone' : IDL.Text,
     'pincode' : IDL.Text,
+    'locality' : IDL.Text,
+    'houseNo' : IDL.Text,
   });
   const ShipmentUpdate = IDL.Record({
     'status' : OrderStatus,
     'message' : IDL.Text,
     'timestamp' : IDL.Int,
+  });
+  const DeliveryType = IDL.Variant({
+    'Standard' : IDL.Null,
+    'Express' : IDL.Null,
   });
   const OrderItem = IDL.Record({
     'title' : IDL.Text,
@@ -370,9 +688,12 @@ export const idlFactory = ({ IDL }) => {
     'status' : OrderStatus,
     'deliveryAddress' : DeliveryAddress,
     'shipmentUpdates' : IDL.Vec(ShipmentUpdate),
+    'paymentMethod' : IDL.Text,
     'userId' : IDL.Principal,
     'createdAt' : IDL.Int,
     'estimatedDelivery' : IDL.Opt(IDL.Int),
+    'deliveryCost' : IDL.Nat,
+    'deliveryType' : DeliveryType,
     'updatedAt' : IDL.Int,
     'totalAmount' : IDL.Nat,
     'items' : IDL.Vec(OrderItem),
@@ -417,17 +738,12 @@ export const idlFactory = ({ IDL }) => {
   });
   const CreateOrderInput = IDL.Record({
     'deliveryAddress' : DeliveryAddress,
+    'paymentMethod' : IDL.Text,
+    'deliveryCost' : IDL.Nat,
+    'deliveryType' : DeliveryType,
     'items' : IDL.Vec(
       IDL.Record({ 'productId' : IDL.Nat, 'quantity' : IDL.Nat })
     ),
-  });
-  const Category = IDL.Record({
-    'id' : CategoryId,
-    'name' : IDL.Text,
-    'slug' : IDL.Text,
-    'description' : IDL.Text,
-    'imageUrl' : IDL.Text,
-    'subCategories' : IDL.Vec(IDL.Text),
   });
   const ProductFilter = IDL.Record({
     'categoryId' : IDL.Opt(CategoryId),
@@ -441,6 +757,21 @@ export const idlFactory = ({ IDL }) => {
   const ProductListResult = IDL.Record({
     'total' : IDL.Nat,
     'products' : IDL.Vec(Product),
+  });
+  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const http_request_result = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
+  const TransformationInput = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : http_request_result,
+  });
+  const TransformationOutput = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
   });
   const CreateServiceRequestInput = IDL.Record({
     'userName' : IDL.Text,
@@ -461,23 +792,115 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
+    '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Bool)],
+        ['query'],
+      ),
+    '_immutableObjectStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_immutableObjectStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [_ImmutableObjectStorageCreateCertificateResult],
+        [],
+      ),
+    '_immutableObjectStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+        [_ImmutableObjectStorageRefillResult],
+        [],
+      ),
+    '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     'addMyAddress' : IDL.Func([Address], [UserProfilePublic], []),
     'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
+    'adminAddCategory' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminAddFeaturedBlock' : IDL.Func(
+        [FeaturedBlockInput],
+        [FeaturedBlock],
+        [],
+      ),
+    'adminAddHeroBanner' : IDL.Func([HeroBannerInput], [HeroBanner], []),
     'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
+    'adminAddSubCategory' : IDL.Func(
+        [CategoryId, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteCategory' : IDL.Func(
+        [CategoryId],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteFeaturedBlock' : IDL.Func(
+        [FeaturedBlockId],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteHeroBanner' : IDL.Func(
+        [HeroBannerId],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
     'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
     'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'adminDeleteSubCategory' : IDL.Func(
+        [CategoryId, SubCategoryId],
+        [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+        [],
+      ),
     'adminGetAllOrders' : IDL.Func(
         [IDL.Nat, IDL.Nat],
         [IDL.Vec(OrderPublic)],
         ['query'],
       ),
+    'adminGetCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
     'adminGetServiceRequests' : IDL.Func(
         [],
         [IDL.Vec(ServiceRequestPublic)],
         ['query'],
       ),
+    'adminListFeaturedBlocks' : IDL.Func(
+        [],
+        [IDL.Vec(FeaturedBlock)],
+        ['query'],
+      ),
+    'adminListHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
+    'adminLogin' : IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(IDL.Text)], []),
+    'adminLogout' : IDL.Func([IDL.Text], [], []),
+    'adminRegisterImageHash' : IDL.Func([IDL.Text], [IDL.Text], []),
+    'adminReorderHeroBanner' : IDL.Func(
+        [HeroBannerId, IDL.Nat],
+        [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
+        [],
+      ),
     'adminSetDiscount' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
     'adminSetUserAdmin' : IDL.Func([IDL.Principal, IDL.Bool], [IDL.Bool], []),
+    'adminUpdateCategory' : IDL.Func(
+        [CategoryId, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateFeaturedBlock' : IDL.Func(
+        [FeaturedBlockId, FeaturedBlockInput],
+        [IDL.Variant({ 'ok' : FeaturedBlock, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateHeroBanner' : IDL.Func(
+        [HeroBannerId, HeroBannerInput],
+        [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
+        [],
+      ),
     'adminUpdateOrderStatus' : IDL.Func(
         [OrderId, OrderStatus, IDL.Text],
         [IDL.Opt(OrderPublic)],
@@ -493,23 +916,98 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(ServiceRequestPublic)],
         [],
       ),
+    'adminUpdateServicesAvailability' : IDL.Func([IDL.Bool, IDL.Text], [], []),
+    'adminUpdateSiteSettings' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+        [
+          IDL.Record({
+            'logoUrl' : IDL.Opt(IDL.Text),
+            'faviconUrl' : IDL.Opt(IDL.Text),
+          }),
+        ],
+        [],
+      ),
     'adminUpdateStock' : IDL.Func([ProductId, IDL.Nat], [IDL.Opt(Product)], []),
+    'adminUpdateSubCategory' : IDL.Func(
+        [CategoryId, SubCategoryId, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateVideoByte' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
     'claimAdminIfFirst' : IDL.Func([], [IDL.Bool], []),
     'clearMyCart' : IDL.Func([], [], []),
     'createOrder' : IDL.Func([CreateOrderInput], [OrderPublic], []),
+    'createRazorpayOrder' : IDL.Func(
+        [IDL.Nat, IDL.Text],
+        [
+          IDL.Variant({
+            'ok' : IDL.Record({
+              'orderId' : IDL.Text,
+              'currency' : IDL.Text,
+              'amount' : IDL.Nat,
+            }),
+            'err' : IDL.Text,
+          }),
+        ],
+        [],
+      ),
     'getCategory' : IDL.Func([CategoryId], [IDL.Opt(Category)], ['query']),
     'getCategoryBySlug' : IDL.Func([IDL.Text], [IDL.Opt(Category)], ['query']),
+    'getFeaturedBlock' : IDL.Func(
+        [FeaturedBlockId],
+        [IDL.Opt(FeaturedBlock)],
+        ['query'],
+      ),
+    'getHeroBanner' : IDL.Func(
+        [HeroBannerId],
+        [IDL.Opt(HeroBanner)],
+        ['query'],
+      ),
     'getMyCart' : IDL.Func([], [CartPublic], []),
     'getMyOrders' : IDL.Func([], [IDL.Vec(OrderPublic)], ['query']),
     'getMyProfile' : IDL.Func([], [UserProfilePublic], []),
     'getOrder' : IDL.Func([OrderId], [IDL.Opt(OrderPublic)], ['query']),
     'getProduct' : IDL.Func([ProductId], [IDL.Opt(Product)], ['query']),
+    'getServicesAvailability' : IDL.Func(
+        [],
+        [IDL.Record({ 'available' : IDL.Bool, 'message' : IDL.Text })],
+        ['query'],
+      ),
+    'getSiteSettings' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'logoUrl' : IDL.Opt(IDL.Text),
+            'faviconUrl' : IDL.Opt(IDL.Text),
+          }),
+        ],
+        ['query'],
+      ),
+    'getVideoByte' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'url' : IDL.Text,
+            'title' : IDL.Text,
+            'enabled' : IDL.Bool,
+          }),
+        ],
+        ['query'],
+      ),
+    'isAdminSession' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'isCurrentUserAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+    'listFeaturedBlocks' : IDL.Func([], [IDL.Vec(FeaturedBlock)], ['query']),
+    'listHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
     'listProducts' : IDL.Func([ProductFilter], [ProductListResult], ['query']),
     'listProductsByCategory' : IDL.Func(
         [CategoryId, IDL.Nat, IDL.Nat],
         [ProductListResult],
+        ['query'],
+      ),
+    'razorpayTransform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
         ['query'],
       ),
     'removeFromCart' : IDL.Func([IDL.Nat], [CartPublic], []),
@@ -525,6 +1023,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [CartPublic], []),
     'updateMyProfile' : IDL.Func([UserProfileInput], [UserProfilePublic], []),
+    'verifyRazorpayPayment' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
   });
 };
 

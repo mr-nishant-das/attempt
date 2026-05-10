@@ -36,11 +36,14 @@ export interface Category {
   'slug' : string,
   'description' : string,
   'imageUrl' : string,
-  'subCategories' : Array<string>,
+  'subCategories' : Array<SubCategory>,
 }
 export type CategoryId = bigint;
 export interface CreateOrderInput {
   'deliveryAddress' : DeliveryAddress,
+  'paymentMethod' : string,
+  'deliveryCost' : bigint,
+  'deliveryType' : DeliveryType,
   'items' : Array<{ 'productId' : bigint, 'quantity' : bigint }>,
 }
 export interface CreateServiceRequestInput {
@@ -56,13 +59,57 @@ export interface CreateServiceRequestInput {
   'recipientName' : [] | [string],
 }
 export interface DeliveryAddress {
+  'street' : string,
   'city' : string,
   'name' : string,
-  'line1' : string,
-  'line2' : string,
+  'district' : string,
   'state' : string,
+  'landmark' : string,
   'phone' : string,
   'pincode' : string,
+  'locality' : string,
+  'houseNo' : string,
+}
+export type DeliveryType = { 'Standard' : null } |
+  { 'Express' : null };
+export interface FeaturedBlock {
+  'id' : FeaturedBlockId,
+  'title' : string,
+  'content' : string,
+  'thumbnailUrl' : string,
+  'order' : bigint,
+  'createdAt' : bigint,
+  'isActive' : boolean,
+  'contentImages' : Array<string>,
+}
+export type FeaturedBlockId = bigint;
+export interface FeaturedBlockInput {
+  'title' : string,
+  'content' : string,
+  'thumbnailUrl' : string,
+  'order' : bigint,
+  'isActive' : boolean,
+  'contentImages' : Array<string>,
+}
+export interface HeroBanner {
+  'id' : HeroBannerId,
+  'title' : string,
+  'order' : bigint,
+  'isActive' : boolean,
+  'imageUrl' : string,
+  'ctaSlug' : string,
+  'ctaText' : string,
+  'subtitle' : string,
+}
+export type HeroBannerId = bigint;
+export interface HeroBannerInput {
+  'title' : string,
+  'order' : bigint,
+  'isActive' : boolean,
+  'imageUrl' : string,
+  'ctaSlug' : string,
+  'ctaText' : string,
+  'subtitle' : string,
 }
 export type OrderId = bigint;
 export interface OrderItem {
@@ -78,9 +125,12 @@ export interface OrderPublic {
   'status' : OrderStatus,
   'deliveryAddress' : DeliveryAddress,
   'shipmentUpdates' : Array<ShipmentUpdate>,
+  'paymentMethod' : string,
   'userId' : Principal,
   'createdAt' : bigint,
   'estimatedDelivery' : [] | [bigint],
+  'deliveryCost' : bigint,
+  'deliveryType' : DeliveryType,
   'updatedAt' : bigint,
   'totalAmount' : bigint,
   'items' : Array<OrderItem>,
@@ -176,6 +226,21 @@ export interface ShipmentUpdate {
   'message' : string,
   'timestamp' : bigint,
 }
+export interface SubCategory {
+  'id' : SubCategoryId,
+  'name' : string,
+  'imageUrl' : string,
+}
+export type SubCategoryId = bigint;
+export interface TransformationInput {
+  'context' : Uint8Array,
+  'response' : http_request_result,
+}
+export interface TransformationOutput {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export type UserId = Principal;
 export interface UserProfileInput {
   'name' : string,
@@ -192,16 +257,109 @@ export interface UserProfilePublic {
   'isAdmin' : boolean,
   'phone' : string,
 }
+export interface _ImmutableObjectStorageCreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
+export interface _ImmutableObjectStorageRefillInformation {
+  'proposed_top_up_amount' : [] | [bigint],
+}
+export interface _ImmutableObjectStorageRefillResult {
+  'success' : [] | [boolean],
+  'topped_up_amount' : [] | [bigint],
+}
+export interface http_header { 'value' : string, 'name' : string }
+export interface http_request_result {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface _SERVICE {
+  '_immutableObjectStorageBlobsAreLive' : ActorMethod<
+    [Array<Uint8Array>],
+    Array<boolean>
+  >,
+  '_immutableObjectStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_immutableObjectStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array>],
+    undefined
+  >,
+  '_immutableObjectStorageCreateCertificate' : ActorMethod<
+    [string],
+    _ImmutableObjectStorageCreateCertificateResult
+  >,
+  '_immutableObjectStorageRefillCashier' : ActorMethod<
+    [[] | [_ImmutableObjectStorageRefillInformation]],
+    _ImmutableObjectStorageRefillResult
+  >,
+  '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   'addMyAddress' : ActorMethod<[Address], UserProfilePublic>,
   'addToCart' : ActorMethod<[bigint, bigint], CartPublic>,
+  'adminAddCategory' : ActorMethod<
+    [string, string, string, string],
+    { 'ok' : Category } |
+      { 'err' : string }
+  >,
+  'adminAddFeaturedBlock' : ActorMethod<[FeaturedBlockInput], FeaturedBlock>,
+  'adminAddHeroBanner' : ActorMethod<[HeroBannerInput], HeroBanner>,
   'adminAddProduct' : ActorMethod<[ProductInput], Product>,
+  'adminAddSubCategory' : ActorMethod<
+    [CategoryId, string, string],
+    { 'ok' : Category } |
+      { 'err' : string }
+  >,
+  'adminDeleteCategory' : ActorMethod<
+    [CategoryId],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminDeleteFeaturedBlock' : ActorMethod<
+    [FeaturedBlockId],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminDeleteHeroBanner' : ActorMethod<
+    [HeroBannerId],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
   'adminDeleteProduct' : ActorMethod<[ProductId], boolean>,
   'adminDeleteServiceRequest' : ActorMethod<[bigint], boolean>,
+  'adminDeleteSubCategory' : ActorMethod<
+    [CategoryId, SubCategoryId],
+    { 'ok' : Category } |
+      { 'err' : string }
+  >,
   'adminGetAllOrders' : ActorMethod<[bigint, bigint], Array<OrderPublic>>,
+  'adminGetCategories' : ActorMethod<[], Array<Category>>,
   'adminGetServiceRequests' : ActorMethod<[], Array<ServiceRequestPublic>>,
+  'adminListFeaturedBlocks' : ActorMethod<[], Array<FeaturedBlock>>,
+  'adminListHeroBanners' : ActorMethod<[], Array<HeroBanner>>,
+  'adminLogin' : ActorMethod<[string, string], [] | [string]>,
+  'adminLogout' : ActorMethod<[string], undefined>,
+  'adminRegisterImageHash' : ActorMethod<[string], string>,
+  'adminReorderHeroBanner' : ActorMethod<
+    [HeroBannerId, bigint],
+    { 'ok' : HeroBanner } |
+      { 'err' : string }
+  >,
   'adminSetDiscount' : ActorMethod<[ProductId, bigint], [] | [Product]>,
   'adminSetUserAdmin' : ActorMethod<[Principal, boolean], boolean>,
+  'adminUpdateCategory' : ActorMethod<
+    [CategoryId, string, string, string, string],
+    { 'ok' : Category } |
+      { 'err' : string }
+  >,
+  'adminUpdateFeaturedBlock' : ActorMethod<
+    [FeaturedBlockId, FeaturedBlockInput],
+    { 'ok' : FeaturedBlock } |
+      { 'err' : string }
+  >,
+  'adminUpdateHeroBanner' : ActorMethod<
+    [HeroBannerId, HeroBannerInput],
+    { 'ok' : HeroBanner } |
+      { 'err' : string }
+  >,
   'adminUpdateOrderStatus' : ActorMethod<
     [OrderId, OrderStatus, string],
     [] | [OrderPublic]
@@ -211,23 +369,60 @@ export interface _SERVICE {
     [bigint, ServiceRequestStatus],
     [] | [ServiceRequestPublic]
   >,
+  'adminUpdateServicesAvailability' : ActorMethod<[boolean, string], undefined>,
+  'adminUpdateSiteSettings' : ActorMethod<
+    [[] | [string], [] | [string]],
+    { 'logoUrl' : [] | [string], 'faviconUrl' : [] | [string] }
+  >,
   'adminUpdateStock' : ActorMethod<[ProductId, bigint], [] | [Product]>,
+  'adminUpdateSubCategory' : ActorMethod<
+    [CategoryId, SubCategoryId, string, string],
+    { 'ok' : Category } |
+      { 'err' : string }
+  >,
+  'adminUpdateVideoByte' : ActorMethod<[string, boolean, string], undefined>,
   'claimAdminIfFirst' : ActorMethod<[], boolean>,
   'clearMyCart' : ActorMethod<[], undefined>,
   'createOrder' : ActorMethod<[CreateOrderInput], OrderPublic>,
+  'createRazorpayOrder' : ActorMethod<
+    [bigint, string],
+    { 'ok' : { 'orderId' : string, 'currency' : string, 'amount' : bigint } } |
+      { 'err' : string }
+  >,
   'getCategory' : ActorMethod<[CategoryId], [] | [Category]>,
   'getCategoryBySlug' : ActorMethod<[string], [] | [Category]>,
+  'getFeaturedBlock' : ActorMethod<[FeaturedBlockId], [] | [FeaturedBlock]>,
+  'getHeroBanner' : ActorMethod<[HeroBannerId], [] | [HeroBanner]>,
   'getMyCart' : ActorMethod<[], CartPublic>,
   'getMyOrders' : ActorMethod<[], Array<OrderPublic>>,
   'getMyProfile' : ActorMethod<[], UserProfilePublic>,
   'getOrder' : ActorMethod<[OrderId], [] | [OrderPublic]>,
   'getProduct' : ActorMethod<[ProductId], [] | [Product]>,
+  'getServicesAvailability' : ActorMethod<
+    [],
+    { 'available' : boolean, 'message' : string }
+  >,
+  'getSiteSettings' : ActorMethod<
+    [],
+    { 'logoUrl' : [] | [string], 'faviconUrl' : [] | [string] }
+  >,
+  'getVideoByte' : ActorMethod<
+    [],
+    { 'url' : string, 'title' : string, 'enabled' : boolean }
+  >,
+  'isAdminSession' : ActorMethod<[string], boolean>,
   'isCurrentUserAdmin' : ActorMethod<[], boolean>,
   'listCategories' : ActorMethod<[], Array<Category>>,
+  'listFeaturedBlocks' : ActorMethod<[], Array<FeaturedBlock>>,
+  'listHeroBanners' : ActorMethod<[], Array<HeroBanner>>,
   'listProducts' : ActorMethod<[ProductFilter], ProductListResult>,
   'listProductsByCategory' : ActorMethod<
     [CategoryId, bigint, bigint],
     ProductListResult
+  >,
+  'razorpayTransform' : ActorMethod<
+    [TransformationInput],
+    TransformationOutput
   >,
   'removeFromCart' : ActorMethod<[bigint], CartPublic>,
   'searchProducts' : ActorMethod<[string, bigint, bigint], ProductListResult>,
@@ -237,6 +432,11 @@ export interface _SERVICE {
   >,
   'updateCartItem' : ActorMethod<[bigint, bigint], CartPublic>,
   'updateMyProfile' : ActorMethod<[UserProfileInput], UserProfilePublic>,
+  'verifyRazorpayPayment' : ActorMethod<
+    [string, string, string],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

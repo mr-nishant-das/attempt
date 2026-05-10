@@ -100,12 +100,13 @@ export default function CartPage() {
         {/* Cart items */}
         <div className="space-y-3 mb-5" data-ocid="cart-items-list">
           {items.map(({ product, quantity }) => {
-            const finalPrice = discountedPrice(
-              product.price,
-              product.discountPercent,
-            );
+            // Explicit conversions: localStorage reviver restores bigint, but
+            // guard with BigInt() in case an older entry slipped through as number.
+            const priceBig = BigInt(product.price);
+            const discountBig = BigInt(product.discountPercent);
+            const finalPrice = discountedPrice(priceBig, discountBig);
             const itemSubtotal = finalPrice * BigInt(quantity);
-            const hasDiscount = product.discountPercent > 0n;
+            const hasDiscount = discountBig > 0n;
 
             return (
               <div
@@ -152,10 +153,10 @@ export default function CartPage() {
                     {hasDiscount && (
                       <>
                         <span className="text-xs text-muted-foreground line-through">
-                          {formatPrice(product.price)}
+                          {formatPrice(priceBig)}
                         </span>
                         <span className="text-xs font-semibold text-secondary">
-                          {product.discountPercent.toString()}% off
+                          {discountBig.toString()}% off
                         </span>
                       </>
                     )}
@@ -166,7 +167,9 @@ export default function CartPage() {
                     <div className="flex items-center border border-border rounded-lg overflow-hidden">
                       <button
                         type="button"
-                        onClick={() => updateQuantity(product.id, quantity - 1)}
+                        onClick={() =>
+                          updateQuantity(BigInt(product.id), quantity - 1)
+                        }
                         className="p-2 hover:bg-muted transition-colors active:scale-95"
                         aria-label="Decrease quantity"
                         data-ocid="cart-qty-decrease"
@@ -181,7 +184,9 @@ export default function CartPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(product.id, quantity + 1)}
+                        onClick={() =>
+                          updateQuantity(BigInt(product.id), quantity + 1)
+                        }
                         disabled={quantity >= Number(product.stock)}
                         className="p-2 hover:bg-muted transition-colors active:scale-95 disabled:opacity-40"
                         aria-label="Increase quantity"
@@ -197,7 +202,7 @@ export default function CartPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => removeItem(product.id)}
+                        onClick={() => removeItem(BigInt(product.id))}
                         className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10"
                         aria-label={`Remove ${product.title} from cart`}
                         data-ocid="cart-item-remove"
@@ -231,8 +236,8 @@ export default function CartPage() {
 
           {items.map(({ product, quantity }) => {
             const finalPrice = discountedPrice(
-              product.price,
-              product.discountPercent,
+              BigInt(product.price),
+              BigInt(product.discountPercent),
             );
             return (
               <div
@@ -280,7 +285,7 @@ export default function CartPage() {
           </div>
 
           {/* Savings callout */}
-          {items.some((i) => i.product.discountPercent > 0n) && (
+          {items.some((i) => BigInt(i.product.discountPercent) > 0n) && (
             <div className="bg-secondary/10 rounded-lg p-2 text-xs text-secondary font-semibold text-center">
               🎁 You're saving{" "}
               {formatPrice(

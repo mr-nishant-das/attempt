@@ -70,7 +70,11 @@ export default function OrderCompletePage() {
 
   const orderIdBigInt = orderId ? BigInt(orderId) : undefined;
 
-  const { data: order, isLoading } = useQuery({
+  const {
+    data: order,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["order-complete", orderId],
     queryFn: async () => {
       if (!actor || !orderIdBigInt) return null;
@@ -126,6 +130,129 @@ export default function OrderCompletePage() {
           <Skeleton className="h-6 w-36 mx-auto" />
           <Skeleton className="h-28 w-full rounded-xl" />
           <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // No orderId in URL — friendly fallback instead of broken/blank screen
+  if (!orderId) {
+    return (
+      <Layout>
+        <div
+          className="text-center px-6 py-10 relative"
+          data-ocid="order-complete-no-id"
+        >
+          <ConfettiBurst />
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <div className="w-24 h-24 rounded-full bg-secondary/15 border-4 border-secondary/30 flex items-center justify-center">
+              <CheckCircle2
+                size={44}
+                className="text-secondary"
+                strokeWidth={1.8}
+              />
+            </div>
+            <div
+              className="absolute w-32 h-32 rounded-full border-2 border-secondary/10 animate-ping"
+              aria-hidden="true"
+            />
+          </div>
+
+          <h1 className="font-display text-3xl font-black text-foreground mb-2 tracking-tight">
+            Order Placed!
+          </h1>
+          <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+            Your order was placed successfully! 🎉
+          </p>
+          <div className="bg-card border border-border rounded-2xl p-4 text-left mb-6">
+            <p className="text-sm text-foreground font-medium mb-1">
+              What's next?
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Check your order history in your{" "}
+              <Link to="/profile" className="text-primary font-medium">
+                Profile
+              </Link>{" "}
+              for full details, status updates, and tracking information.
+            </p>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 mb-6 text-center">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              🌿 Your purchase directly supports local Assamese artisans and
+              farmers — thank you!
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Link to="/profile">
+              <Button
+                className="w-full btn-primary border-0 h-11 text-base"
+                data-ocid="order-complete-view-orders"
+              >
+                View My Orders
+              </Button>
+            </Link>
+            <Link to="/home">
+              <Button
+                variant="outline"
+                className="w-full border-primary/30 text-primary h-11"
+                data-ocid="order-complete-shop"
+              >
+                Continue Shopping
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Query error fallback
+  if (isError) {
+    return (
+      <Layout>
+        <div
+          className="text-center px-6 py-10"
+          data-ocid="order-complete-error"
+        >
+          <div className="w-20 h-20 rounded-full bg-secondary/15 border-4 border-secondary/30 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2
+              size={36}
+              className="text-secondary"
+              strokeWidth={1.8}
+            />
+          </div>
+          <h1 className="font-display text-2xl font-black text-foreground mb-2">
+            Order Placed!
+          </h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            Your order was placed. We couldn't load the details right now —
+            check your order history in{" "}
+            <Link to="/profile" className="text-primary font-medium">
+              Profile
+            </Link>{" "}
+            for full details.
+          </p>
+          <div className="space-y-3">
+            <Link to="/profile">
+              <Button
+                className="w-full btn-primary border-0 h-11"
+                data-ocid="order-complete-profile"
+              >
+                View My Orders
+              </Button>
+            </Link>
+            <Link to="/home">
+              <Button
+                variant="outline"
+                className="w-full border-primary/30 text-primary h-11"
+                data-ocid="order-complete-shop"
+              >
+                Continue Shopping
+              </Button>
+            </Link>
+          </div>
         </div>
       </Layout>
     );

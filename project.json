@@ -1,25 +1,25 @@
 {
-  "overview": "AssamRoots is an Assamese-first commerce platform connecting the Assamese diaspora worldwide with authentic products from Assam. Features a full product catalog organized by category and sub-category, location-aware checkout disclaimers, and a Coming Soon services page targeted at residents inside Assam.",
+  "overview": "AssamRoots is an Assamese-first e-commerce and community platform connecting the Assamese diaspora with authentic products and services from Assam. Features culturally-themed Assamese design, full product catalog, service booking, admin management panel, and Razorpay payments.",
   "features": [
-    "15 product categories with full sub-category navigation",
-    "Sub-cultural apparel (Assamese, Boro, Mising, Karbi)",
-    "Location-aware disclaimer banner at checkout (India vs Abroad)",
-    "Mandatory disclaimer acceptance before payment",
-    "Assam-only Services Coming Soon page with 10 teaser cards",
-    "Product discovery with search, filters, and category tiles",
-    "Cart, checkout, and Stripe payment integration",
-    "Order tracking and admin discount management"
+    "Assamese-themed color palette (Gamosa red, Muga gold, Bihu saffron)",
+    "Full product catalog with 110+ Assamese products",
+    "Responsive design for mobile and desktop",
+    "Service booking with availability management",
+    "Razorpay payments with COD option",
+    "Admin panel with encrypted login",
+    "Video byte homepage section",
+    "Order receipt emails",
+    "Persistent order numbering across updates"
   ],
-  "category": "ecommerce",
+  "category": "e-commerce",
   "tags": [
-    "assam",
-    "india",
+    "assamese",
     "ecommerce",
+    "india",
     "cultural",
     "diaspora",
     "products",
-    "handicrafts",
-    "commerce"
+    "services"
   ],
-  "last_updated": "2026-04-12T17:40:26.495Z"
+  "last_updated": "2026-04-28T17:12:35.310Z"
 }

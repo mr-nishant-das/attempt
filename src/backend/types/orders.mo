@@ -1,6 +1,11 @@
 module {
   public type OrderId = Nat;
 
+  public type DeliveryType = {
+    #Express;
+    #Standard;
+  };
+
   public type OrderStatus = {
     #Processing;
     #Confirmed;
@@ -22,9 +27,12 @@ module {
   public type DeliveryAddress = {
     name : Text;
     phone : Text;
-    line1 : Text;
-    line2 : Text;
+    houseNo : Text;
+    street : Text;
+    locality : Text;
+    landmark : Text;
     city : Text;
+    district : Text;
     state : Text;
     pincode : Text;
   };
@@ -40,6 +48,9 @@ module {
     userId : Principal;
     items : [OrderItem];
     deliveryAddress : DeliveryAddress;
+    paymentMethod : Text;
+    deliveryType : DeliveryType;
+    deliveryCost : Nat;
     var status : OrderStatus;
     var shipmentUpdates : [ShipmentUpdate];
     totalAmount : Nat;
@@ -53,6 +64,9 @@ module {
     userId : Principal;
     items : [OrderItem];
     deliveryAddress : DeliveryAddress;
+    paymentMethod : Text;
+    deliveryType : DeliveryType;
+    deliveryCost : Nat;
     status : OrderStatus;
     shipmentUpdates : [ShipmentUpdate];
     totalAmount : Nat;
@@ -64,5 +78,8 @@ module {
   public type CreateOrderInput = {
     items : [{ productId : Nat; quantity : Nat }];
     deliveryAddress : DeliveryAddress;
+    paymentMethod : Text;
+    deliveryType : DeliveryType;
+    deliveryCost : Nat;
   };
 };

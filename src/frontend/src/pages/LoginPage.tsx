@@ -94,11 +94,14 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => navigate({ to: "/home" })}
-          className="font-display text-2xl font-black tracking-tight select-none"
+          className="select-none"
           aria-label="AssamRoots home"
         >
-          <span className="text-primary">Assam</span>
-          <span className="text-secondary">Roots</span>
+          <img
+            src="/assets/logo.png"
+            alt="AssamRoots"
+            className="h-10 w-auto object-contain"
+          />
         </button>
         <span className="text-xs text-muted-foreground font-medium px-2 py-1 rounded-full bg-muted">
           Secure Login

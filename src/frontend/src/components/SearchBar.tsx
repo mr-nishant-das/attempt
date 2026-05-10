@@ -1,30 +1,18 @@
+import { searchProducts } from "@/data/catalog";
 import { useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-
-const SUGGESTIONS = [
-  "Assam CTC Tea",
-  "Mekhela Chador",
-  "Bamboo Craft",
-  "Gamosa",
-  "Black Rice",
-  "Joha Rice",
-  "Tamul",
-  "Assamese Sweets",
-  "Handloom Saree",
-  "Brass Utensils",
-];
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const QUICK_LINKS = [
-  { label: "Tea", slug: "tea" },
-  { label: "Handloom", slug: "handloom" },
-  { label: "Spices", slug: "spices" },
-  { label: "Crafts", slug: "crafts" },
-  { label: "Food", slug: "food" },
+  { label: "Tea", slug: "assam-tea" },
+  { label: "Handloom", slug: "handloom-textiles" },
+  { label: "Spices", slug: "spices-herbs" },
+  { label: "Crafts", slug: "handicrafts" },
+  { label: "Food", slug: "assamese-food" },
+  { label: "Music", slug: "musical-instruments" },
 ];
 
 interface SearchBarProps {
-  /** Set to true to focus the input on mount */
   initialFocus?: boolean;
   placeholder?: string;
 }
@@ -36,16 +24,24 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  // Focus on mount when requested
   useEffect(() => {
-    if (initialFocus) {
-      inputRef.current?.focus();
-    }
+    if (initialFocus) inputRef.current?.focus();
   }, [initialFocus]);
 
-  const filtered = query.trim()
-    ? SUGGESTIONS.filter((s) => s.toLowerCase().includes(query.toLowerCase()))
-    : SUGGESTIONS.slice(0, 6);
+  // Live suggestions from shared catalog
+  const suggestions = useMemo(() => {
+    if (!query.trim()) return [];
+    const results = searchProducts(query);
+    const seen = new Set<string>();
+    const titles: string[] = [];
+    for (const p of results) {
+      if (!seen.has(p.title) && titles.length < 7) {
+        seen.add(p.title);
+        titles.push(p.title);
+      }
+    }
+    return titles;
+  }, [query]);
 
   const handleSearch = useCallback(
     (term: string) => {
@@ -68,7 +64,6 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
     }
   };
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -84,19 +79,18 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
 
   return (
     <div ref={containerRef} className="relative w-full">
+      {/* Search input */}
       <div className="relative flex items-center">
         <Search
           size={16}
-          className="absolute left-3 text-muted-foreground pointer-events-none z-10"
+          className="absolute left-4 text-muted-foreground pointer-events-none z-10"
         />
         <input
           ref={inputRef}
           type="search"
           value={query}
-          placeholder={
-            placeholder ?? "Search authentic Assamese products, crafts…"
-          }
-          className="search-input w-full pl-9 pr-9 h-10 text-sm"
+          placeholder={placeholder ?? "Search tea, spices, handloom, crafts…"}
+          className="search-input w-full pl-12 pr-11 h-11 text-sm"
           onFocus={() => setFocused(true)}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -107,7 +101,7 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
           <button
             type="button"
             onClick={() => setQuery("")}
-            className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-4 text-muted-foreground hover:text-foreground transition-colors p-1"
             aria-label="Clear search"
           >
             <X size={14} />
@@ -115,8 +109,8 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
         )}
       </div>
 
-      {/* Quick links */}
-      <div className="flex gap-2 mt-2 overflow-x-auto pb-0.5">
+      {/* Quick-link chips */}
+      <div className="flex gap-2 mt-3 overflow-x-auto pb-0.5 scrollbar-none">
         {QUICK_LINKS.map((link) => (
           <button
             key={link.slug}
@@ -124,7 +118,7 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
             onClick={() =>
               navigate({ to: "/categories/$slug", params: { slug: link.slug } })
             }
-            className="flex-none px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-smooth whitespace-nowrap"
+            className="flex-none px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-smooth whitespace-nowrap"
             data-ocid={`search-quick-link-${link.slug}`}
           >
             {link.label}
@@ -133,13 +127,13 @@ export function SearchBar({ initialFocus, placeholder }: SearchBarProps) {
       </div>
 
       {/* Suggestions dropdown */}
-      {focused && filtered.length > 0 && (
+      {focused && suggestions.length > 0 && (
         <ul className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden list-none p-0 m-0">
-          {filtered.map((s) => (
+          {suggestions.map((s) => (
             <li key={s}>
               <button
                 type="button"
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors text-left"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setQuery(s);

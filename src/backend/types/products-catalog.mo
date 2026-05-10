@@ -1,6 +1,13 @@
 module {
   public type ProductId = Nat;
   public type CategoryId = Nat;
+  public type SubCategoryId = Nat;
+
+  public type SubCategory = {
+    id : SubCategoryId;
+    name : Text;
+    imageUrl : Text;
+  };
 
   public type Category = {
     id : CategoryId;
@@ -8,7 +15,7 @@ module {
     slug : Text;
     description : Text;
     imageUrl : Text;
-    subCategories : [Text];
+    subCategories : [SubCategory];
   };
 
   public type Product = {

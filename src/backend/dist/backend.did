@@ -1,3 +1,27 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
 type UserProfilePublic = 
  record {
    addresses: vec Address;
@@ -16,6 +40,24 @@ type UserProfileInput =
    phone: text;
  };
 type UserId = principal;
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type SubCategoryId = nat;
+type SubCategory = 
+ record {
+   id: SubCategoryId;
+   imageUrl: text;
+   name: text;
+ };
 type ShipmentUpdate = 
  record {
    message: text;
@@ -126,9 +168,12 @@ type OrderPublic =
  record {
    createdAt: int;
    deliveryAddress: DeliveryAddress;
+   deliveryCost: nat;
+   deliveryType: DeliveryType;
    estimatedDelivery: opt int;
    id: OrderId;
    items: vec OrderItem;
+   paymentMethod: text;
    shipmentUpdates: vec ShipmentUpdate;
    status: OrderStatus;
    totalAmount: nat;
@@ -145,15 +190,66 @@ type OrderItem =
    title: text;
  };
 type OrderId = nat;
+type HeroBannerInput = 
+ record {
+   ctaSlug: text;
+   ctaText: text;
+   imageUrl: text;
+   isActive: bool;
+   order: nat;
+   subtitle: text;
+   title: text;
+ };
+type HeroBannerId = nat;
+type HeroBanner = 
+ record {
+   ctaSlug: text;
+   ctaText: text;
+   id: HeroBannerId;
+   imageUrl: text;
+   isActive: bool;
+   order: nat;
+   subtitle: text;
+   title: text;
+ };
+type FeaturedBlockInput = 
+ record {
+   content: text;
+   contentImages: vec text;
+   isActive: bool;
+   order: nat;
+   thumbnailUrl: text;
+   title: text;
+ };
+type FeaturedBlockId = nat;
+type FeaturedBlock = 
+ record {
+   content: text;
+   contentImages: vec text;
+   createdAt: int;
+   id: FeaturedBlockId;
+   isActive: bool;
+   order: nat;
+   thumbnailUrl: text;
+   title: text;
+ };
+type DeliveryType = 
+ variant {
+   Express;
+   Standard;
+ };
 type DeliveryAddress = 
  record {
    city: text;
-   line1: text;
-   line2: text;
+   district: text;
+   houseNo: text;
+   landmark: text;
+   locality: text;
    name: text;
    phone: text;
    pincode: text;
    state: text;
+   street: text;
  };
 type CreateServiceRequestInput = 
  record {
@@ -171,10 +267,13 @@ type CreateServiceRequestInput =
 type CreateOrderInput = 
  record {
    deliveryAddress: DeliveryAddress;
+   deliveryCost: nat;
+   deliveryType: DeliveryType;
    items: vec record {
                 productId: nat;
                 quantity: nat;
               };
+   paymentMethod: text;
  };
 type CategoryId = nat;
 type Category = 
@@ -184,7 +283,7 @@ type Category =
    imageUrl: text;
    name: text;
    slug: text;
-   subCategories: vec text;
+   subCategories: vec SubCategory;
  };
 type CartPublic = 
  record {
@@ -210,36 +309,146 @@ type Address =
    state: text;
  };
 service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
   addMyAddress: (address: Address) -> (UserProfilePublic);
   addToCart: (productId: nat, quantity: nat) -> (CartPublic);
+  adminAddCategory: (name: text, slug: text, description: text, imageUrl:
+   text) -> (variant {
+               err: text;
+               ok: Category;
+             });
+  adminAddFeaturedBlock: (input: FeaturedBlockInput) -> (FeaturedBlock);
+  adminAddHeroBanner: (input: HeroBannerInput) -> (HeroBanner);
   adminAddProduct: (input: ProductInput) -> (Product);
+  adminAddSubCategory: (categoryId: CategoryId, name: text, imageUrl:
+   text) -> (variant {
+               err: text;
+               ok: Category;
+             });
+  adminDeleteCategory: (id: CategoryId) -> (variant {
+                                              err: text;
+                                              ok: bool;
+                                            });
+  adminDeleteFeaturedBlock: (id: FeaturedBlockId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteHeroBanner: (id: HeroBannerId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
   adminDeleteProduct: (id: ProductId) -> (bool);
   adminDeleteServiceRequest: (id: nat) -> (bool);
+  adminDeleteSubCategory: (categoryId: CategoryId, subCategoryId:
+   SubCategoryId) -> (variant {
+                        err: text;
+                        ok: Category;
+                      });
   adminGetAllOrders: (limit: nat, offset: nat) -> (vec OrderPublic) query;
+  adminGetCategories: () -> (vec Category) query;
   adminGetServiceRequests: () -> (vec ServiceRequestPublic) query;
+  adminListFeaturedBlocks: () -> (vec FeaturedBlock) query;
+  adminListHeroBanners: () -> (vec HeroBanner) query;
+  adminLogin: (userId: text, passcode: text) -> (opt text);
+  adminLogout: (token: text) -> ();
+  adminRegisterImageHash: (hash: text) -> (text);
+  adminReorderHeroBanner: (id: HeroBannerId, newOrder: nat) ->
+   (variant {
+      err: text;
+      ok: HeroBanner;
+    });
   adminSetDiscount: (id: ProductId, discountPercent: nat) -> (opt Product);
   adminSetUserAdmin: (targetUser: principal, adminStatus: bool) -> (bool);
+  adminUpdateCategory: (id: CategoryId, name: text, slug: text, description:
+   text, imageUrl: text) -> (variant {
+                               err: text;
+                               ok: Category;
+                             });
+  adminUpdateFeaturedBlock: (id: FeaturedBlockId, input:
+   FeaturedBlockInput) -> (variant {
+                             err: text;
+                             ok: FeaturedBlock;
+                           });
+  adminUpdateHeroBanner: (id: HeroBannerId, input: HeroBannerInput) ->
+   (variant {
+      err: text;
+      ok: HeroBanner;
+    });
   adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
    text) -> (opt OrderPublic);
   adminUpdateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
   adminUpdateServiceRequestStatus: (id: nat, status: ServiceRequestStatus) ->
    (opt ServiceRequestPublic);
+  adminUpdateServicesAvailability: (available: bool, message: text) -> ();
+  adminUpdateSiteSettings: (logoUrl: opt text, faviconUrl: opt text) ->
+   (record {
+      faviconUrl: opt text;
+      logoUrl: opt text;
+    });
   adminUpdateStock: (id: ProductId, newStock: nat) -> (opt Product);
+  adminUpdateSubCategory: (categoryId: CategoryId, subCategoryId:
+   SubCategoryId, name: text, imageUrl: text) ->
+   (variant {
+      err: text;
+      ok: Category;
+    });
+  adminUpdateVideoByte: (url: text, enabled: bool, title: text) -> ();
   claimAdminIfFirst: () -> (bool);
   clearMyCart: () -> ();
   createOrder: (input: CreateOrderInput) -> (OrderPublic);
+  createRazorpayOrder: (amount: nat, receipt: text) ->
+   (variant {
+      err: text;
+      ok: record {
+            amount: nat;
+            currency: text;
+            orderId: text;
+          };
+    });
   getCategory: (id: CategoryId) -> (opt Category) query;
   getCategoryBySlug: (slug: text) -> (opt Category) query;
+  getFeaturedBlock: (id: FeaturedBlockId) -> (opt FeaturedBlock) query;
+  getHeroBanner: (id: HeroBannerId) -> (opt HeroBanner) query;
   getMyCart: () -> (CartPublic);
   getMyOrders: () -> (vec OrderPublic) query;
   getMyProfile: () -> (UserProfilePublic);
   getOrder: (orderId: OrderId) -> (opt OrderPublic) query;
   getProduct: (id: ProductId) -> (opt Product) query;
+  getServicesAvailability: () ->
+   (record {
+      available: bool;
+      message: text;
+    }) query;
+  getSiteSettings: () ->
+   (record {
+      faviconUrl: opt text;
+      logoUrl: opt text;
+    }) query;
+  getVideoByte: () -> (record {
+                         enabled: bool;
+                         title: text;
+                         url: text;
+                       }) query;
+  isAdminSession: (token: text) -> (bool) query;
   isCurrentUserAdmin: () -> (bool) query;
   listCategories: () -> (vec Category) query;
+  listFeaturedBlocks: () -> (vec FeaturedBlock) query;
+  listHeroBanners: () -> (vec HeroBanner) query;
   listProducts: (filter: ProductFilter) -> (ProductListResult) query;
   listProductsByCategory: (categoryId: CategoryId, limit: nat, offset:
    nat) -> (ProductListResult) query;
+  razorpayTransform: (input: TransformationInput) ->
+   (TransformationOutput) query;
   removeFromCart: (productId: nat) -> (CartPublic);
   searchProducts: (term: text, limit: nat, offset: nat) ->
    (ProductListResult) query;
@@ -247,4 +456,9 @@ service : {
    (ServiceRequestPublic);
   updateCartItem: (productId: nat, quantity: nat) -> (CartPublic);
   updateMyProfile: (input: UserProfileInput) -> (UserProfilePublic);
+  verifyRazorpayPayment: (razorpayOrderId: text, razorpayPaymentId: text,
+   razorpaySignature: text) -> (variant {
+                                  err: text;
+                                  ok: bool;
+                                });
 }

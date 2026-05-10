@@ -4,25 +4,25 @@
 Assamese-first e-commerce discovery platform celebrating heritage products with trust-focused, mobile-first interface inspired by Flipkart and Blinkit.
 
 ## Tone & Aesthetic
-Warm, authentic, editorial, premium-casual. Assamese cultural identity woven throughout. Trust-driven e-commerce patterns emphasizing verified sellers, ratings, delivery confidence.
+Warm, authentic, editorial, heritage-first. Deep Gamosa crimson + muga gold + forest green embody Assamese cultural identity. Trust-driven e-commerce emphasizing verified sellers, ratings, community heritage.
 
 ## Color Palette (OKLCH)
 
 | Role | OKLCH | Hex | Usage |
 |---|---|---|---|
-| Primary | 0.68 0.24 55 | #F39C12 | Saffron — CTAs, bottom nav, trust badges |
-| Secondary | 0.40 0.15 155 | #1B5E20 | Forest Green — Heritage accent, dark mode background |
-| Accent | 0.75 0.18 65 | #E8C547 | Gold — Highlights, verified badges, premium tier |
-| Background | 0.98 0.01 60 | #FAF7F2 | Warm cream, not white |
+| Primary | 0.48 0.18 30 | #C0392B | Gamosa Red — CTAs, bottom nav active, trust badges |
+| Secondary | 0.70 0.12 50 | #D4A017 | Muga Gold — Heritage accent, premium tier |
+| Accent | 0.42 0.10 145 | #2D6A4F | Forest Green — Tea gardens, secondary actions |
+| Background | 0.98 0.02 60 | #FDF6E3 | Ivory/Cream — Gamosa white, warm neutral |
 | Card | 1.0 0 0 | #FFFFFF | Pure white for product cards |
-| Foreground | 0.12 0.02 40 | #1F1613 | Warm charcoal, text |
-| Border | 0.94 0.02 55 | #F0EBE3 | Soft warm neutral |
-| Muted | 0.92 0.02 50 | #E8E1D7 | Category tiles, inactive states |
+| Foreground | 0.22 0.08 25 | #3E1F00 | Earthy Brown — Tea soil, warm text |
+| Border | 0.94 0.02 60 | #F0EBE3 | Soft warm neutral |
+| Muted | 0.92 0.03 60 | #E8E1D7 | Category tiles, inactive states |
 
 ## Typography
-- **Display**: Satoshi (modern, geometric, Assamese-friendly)
-- **Body**: Plus Jakarta Sans (readable, accessible, warm personality)
-- **Mono**: JetBrains Mono (technical elements, data displays)
+- **Display**: Bricolage Grotesque (bold geometric, distinctly Assamese-rooted identity)
+- **Body**: Plus Jakarta Sans (warm, accessible, heritage-friendly personality)
+- **Mono**: JetBrains Mono (technical elements, pricing/inventory displays)
 - **Scale**: Display 2xl–lg for hero/sections, Body sm–base for content, Mono for cart/pricing
 
 ## Shape Language
@@ -42,11 +42,11 @@ Warm, authentic, editorial, premium-casual. Assamese cultural identity woven thr
 | Popover/modal | popover | border-border | shadow-elevated |
 
 ## Structural Zones
-1. **Top sticky header**: Warm cream background with search bar, transparent navigation indicators
-2. **Hero section**: Saffron-tinted gradient + category tile grid (8 tiles: Tea, Spices, Handloom, Crafts, Food, Books, Attire, Kitchen)
-3. **Product grid**: Alternating card backgrounds (white cards on warm cream), 2–3 column responsive, trust signals integrated (badges, ratings)
-4. **Bottom unified nav**: 5-item navigation (Home, Categories, Search, Cart, Account) with saffron active state, persistent across pages
-5. **Dark mode**: Forest green backgrounds, reduced brightness, warm gold accents maintained
+1. **Top sticky header**: Ivory cream background with search bar, Gamosa red accents
+2. **Hero section**: Muga gold gradient + category tile grid (8 tiles: Tea, Spices, Handloom, Crafts, Food, Books, Attire, Kitchen)
+3. **Product grid**: White cards on cream background, 2–3 column responsive, Gamosa red trust badges
+4. **Bottom unified nav**: 5-item navigation with deep crimson active state, persistent across pages
+5. **Dark mode**: Forest green backgrounds (tea garden darkness), reduced brightness, Muga gold accents
 
 ## Spacing & Rhythm
 - **Micro**: 2px, 4px (borders, gaps)
@@ -57,10 +57,10 @@ Warm, authentic, editorial, premium-casual. Assamese cultural identity woven thr
 - **Density**: Tight on mobile, relaxed on desktop; product grids flow with system rhythm
 
 ## Component Patterns
-- **Buttons**: Primary (saffron bg, white text, sharp hovers), Secondary (muted bg, foreground text), Accent (gold, used sparingly for premium/verified)
-- **Search input**: 2px border on focus (primary color), placeholder in muted, clear icon on right
-- **Product card**: Image top, title 2-line, price in bold (primary), rating badge with star (accent), add-to-cart button bottom
-- **Badge verified**: Tiny accent bg with foreground text, icon + "Verified Seller" or "Certified" label
+- **Buttons**: Primary (Gamosa red bg, ivory text, sharp hovers), Secondary (muted bg, brown text), Accent (forest green, used sparingly)
+- **Search input**: 2px border on focus (primary crimson), placeholder in muted, clear icon on right
+- **Product card**: Image top, title 2-line, price in bold (Gamosa red), rating badge with star (forest green), add-to-cart bottom
+- **Badge verified**: Accent green bg with ivory text, icon + "Verified Seller" label
 - **Category tile**: Icon (48px), label below, muted bg on default, hover state darkens 10%
 
 ## Motion
@@ -71,20 +71,21 @@ Warm, authentic, editorial, premium-casual. Assamese cultural identity woven thr
 - **Bottom nav switch**: Fade-in 200ms on label change
 
 ## Constraints
-- **No pure white backgrounds** in light mode — use warm cream (#FAF7F2) to reduce eye strain and reinforce Assamese warmth
-- **Saffron never pure on small text** — check AA+ contrast; use on large elements, buttons, badges
-- **Dark mode forest green base** — preserve Assamese cultural identity in both themes
-- **Bottom nav persistent** — never hidden, always reachable
-- **Search always sticky** — visible across all pages, searchable product/category index
-- **No burger menu** — all navigation via bottom bar + content drawers
+- **Gamosa red (primary) for all CTAs** — every critical action uses Gamosa crimson for cultural authenticity
+- **Forest green sparingly** — accent only on secondary elements and verified badges
+- **Muga gold accents** — used for premium tier, special highlights, hero section gradients
+- **Dark mode uses forest green base** — preserves tea garden aesthetic and Assamese cultural identity
+- **Bottom nav persistent** — always accessible, Gamosa red active state
+- **Search always sticky** — searchable product index available on every page
 
 ## Signature Detail
 **Trust Signal Integration**: Verified seller badges (gold accent + icon) appear on product cards and seller profiles. Delivery promise ("Fast delivery", "Same-day") integrated as small badges below price. Star ratings and review count displayed prominently. Order tracking uses milestone icons with warm accent colors. These details reinforce confidence in transactions without cluttering the interface.
 
 ## Dark Mode Overrides
-- **Background**: 0.18 0.05 155 (forest green base)
-- **Card**: 0.22 0.04 155 (slightly lighter forest green)
-- **Primary**: 0.72 0.20 55 (brightened saffron for readability)
-- **Accent**: 0.78 0.15 65 (brightened gold)
-- **Foreground**: 0.95 0.02 50 (warm off-white text)
-- **Muted**: 0.28 0.03 155 (dark forest for disabled/secondary elements)
+- **Background**: 0.20 0.06 145 (forest green base — tea garden darkness)
+- **Card**: 0.25 0.05 145 (slightly lighter forest green)
+- **Primary**: 0.55 0.16 30 (brightened Gamosa red for readability)
+- **Secondary**: 0.75 0.12 50 (brightened Muga gold)
+- **Accent**: 0.48 0.10 145 (brightened forest green)
+- **Foreground**: 0.96 0.02 60 (ivory/cream text for contrast)
+- **Muted**: 0.32 0.04 145 (dark forest for disabled states)

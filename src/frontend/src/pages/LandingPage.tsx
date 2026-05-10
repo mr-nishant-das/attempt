@@ -250,16 +250,11 @@ export default function LandingPage() {
       >
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/home" className="flex items-center gap-2">
-            <span className="font-display text-2xl font-black tracking-tight">
-              <span className="text-primary">Assam</span>
-              <span className="text-secondary">Roots</span>
-            </span>
-            <Badge
-              variant="secondary"
-              className="text-[9px] px-1.5 py-0.5 bg-accent/20 text-accent-foreground border-0 font-bold"
-            >
-              ✦ Authentic
-            </Badge>
+            <img
+              src="/assets/logo.png"
+              alt="AssamRoots"
+              className="h-10 w-auto object-contain"
+            />
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/login">
@@ -597,10 +592,11 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <Link to="/home" className="flex items-center gap-1.5">
-              <span className="font-display text-lg font-black tracking-tight">
-                <span className="text-primary">Assam</span>
-                <span className="text-secondary">Roots</span>
-              </span>
+              <img
+                src="/assets/logo.png"
+                alt="AssamRoots"
+                className="h-8 w-auto object-contain"
+              />
               <span className="text-[10px] text-muted-foreground">
                 © {new Date().getFullYear()}
               </span>

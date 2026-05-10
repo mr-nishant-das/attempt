@@ -1,377 +1,67 @@
+import type { Product } from "@/backend";
 import { CategoryTile } from "@/components/CategoryTile";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/hooks/useCart";
-import type { Category, Product } from "@/types";
+import {
+  type FeaturedBlock,
+  type HeroBanner,
+  useCategories,
+  useFeaturedBlocks,
+  useHeroBanners,
+  useProducts,
+  useVideoByte,
+} from "@/hooks/useQueries";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Flame, ShieldCheck, Truck, Zap } from "lucide-react";
+import {
+  ChevronRight,
+  Flame,
+  Play,
+  ShieldCheck,
+  Truck,
+  X,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-// ─── Static data ────────────────────────────────────────────────────────────
+// ─── Static fallback banners ──────────────────────────────────────────────────
 
-const CATEGORIES: Category[] = [
+const FALLBACK_BANNERS: HeroBanner[] = [
   {
     id: 1n,
-    name: "Assam Tea",
-    slug: "assam-tea",
-    description: "Premium Tea",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 3n,
-    name: "Spices & Herbs",
-    slug: "spices-herbs",
-    description: "Assam Spices",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 6n,
-    name: "Handloom",
-    slug: "handloom-textiles",
-    description: "Handloom Weaves",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 7n,
-    name: "Handicrafts",
-    slug: "handicrafts",
-    description: "Bamboo & Cane",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 2n,
-    name: "Assamese Food",
-    slug: "assamese-food",
-    description: "Regional Foods",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 9n,
-    name: "Books",
-    slug: "books-literature",
-    description: "Books & Culture",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 5n,
-    name: "Attire",
-    slug: "assamese-attire",
-    description: "Assamese Attire",
-    imageUrl: "",
-    subCategories: [],
-  },
-  {
-    id: 14n,
-    name: "Kitchen",
-    slug: "kitchen-cookware",
-    description: "Kitchenware",
-    imageUrl: "",
-    subCategories: [],
-  },
-];
-
-const HERO_BANNERS = [
-  {
-    id: 1,
-    image: "/assets/generated/banner-tea-harvest.dim_900x400.jpg",
-    badge: "NEW HARVEST",
-    badgeColor: "bg-primary text-primary-foreground",
-    title: "Fresh from Assam's\nTea Gardens",
+    imageUrl:
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=900&q=80",
+    title: "Fresh from Assam's Tea Gardens",
     subtitle: "Up to 20% off on premium orthodox teas this season",
-    cta: "Shop Teas",
-    slug: "assam-tea",
-  },
-  {
-    id: 2,
-    image: "/assets/generated/banner-handloom.dim_900x400.jpg",
-    badge: "HANDLOOM FESTIVAL",
-    badgeColor: "bg-secondary text-secondary-foreground",
-    title: "Authentic Assamese\nSilk & Weaves",
-    subtitle: "Celebrate the art of Mekhela Chador & Muga silk",
-    cta: "Explore Handloom",
-    slug: "handloom-textiles",
-  },
-  {
-    id: 3,
-    image: "/assets/generated/banner-spices-kitchen.dim_900x400.jpg",
-    badge: "KITCHEN ESSENTIALS",
-    badgeColor: "bg-accent text-accent-foreground",
-    title: "Authentic Assamese\nKitchen & Spices",
-    subtitle: "Clay cookware, Bhut Jolokia & traditional flavours",
-    cta: "Shop Now",
-    slug: "kitchen-cookware",
-  },
-];
-
-const BESTSELLER_PRODUCTS: Product[] = [
-  {
-    id: 1n,
-    title: "Heritage CTC Assam Tea — 500g",
-    description: "Bold, malty CTC tea from the Brahmaputra valley.",
-    price: 49900n,
-    discountPercent: 10n,
-    imageUrls: ["/assets/generated/product-ctc-tea.dim_400x400.jpg"],
-    category: 1n,
-    subCategory: "CTC",
-    rating: 42n,
-    reviewCount: 1280n,
-    stock: 50n,
-    brand: "Heritage Tea Co.",
-    tags: ["tea"],
+    ctaText: "Shop Teas",
+    ctaSlug: "assam-tea",
+    order: 1n,
     isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
   },
   {
     id: 2n,
-    title: "Handwoven Mekhela Chador — Silk",
-    description: "Traditional Assamese two-piece silk drape.",
-    price: 325000n,
-    discountPercent: 5n,
-    imageUrls: ["/assets/generated/product-mekhela-chador.dim_400x400.jpg"],
-    category: 3n,
-    subCategory: "Mekhela",
-    rating: 47n,
-    reviewCount: 312n,
-    stock: 8n,
-    brand: "Majuli Weavers",
-    tags: ["handloom"],
+    imageUrl:
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=900&q=80",
+    title: "Authentic Assamese Silk & Weaves",
+    subtitle: "Celebrate the art of Mekhela Chador & Muga silk",
+    ctaText: "Explore Handloom",
+    ctaSlug: "handloom-textiles",
+    order: 2n,
     isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
   },
   {
     id: 3n,
-    title: "Bamboo Cane Basket Set — 3 Pcs",
-    description: "Handcrafted baskets from natural Assam bamboo.",
-    price: 49900n,
-    discountPercent: 0n,
-    imageUrls: ["/assets/generated/product-bamboo-basket.dim_400x400.jpg"],
-    category: 4n,
-    subCategory: "Baskets",
-    rating: 44n,
-    reviewCount: 89n,
-    stock: 23n,
-    brand: "Bongaigaon Crafts",
-    tags: ["bamboo"],
+    imageUrl:
+      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=900&q=80",
+    title: "Authentic Assamese Kitchen & Spices",
+    subtitle: "Clay cookware, Bhut Jolokia & traditional flavours",
+    ctaText: "Shop Now",
+    ctaSlug: "kitchen-cookware",
+    order: 3n,
     isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 4n,
-    title: "Joha Scented Rice — 1 kg",
-    description: "Prized aromatic short-grain rice from Kamrup.",
-    price: 18000n,
-    discountPercent: 8n,
-    imageUrls: ["/assets/generated/product-joha-rice.dim_400x400.jpg"],
-    category: 5n,
-    subCategory: "Rice",
-    rating: 48n,
-    reviewCount: 560n,
-    stock: 200n,
-    brand: "Kamrup Organics",
-    tags: ["rice"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 5n,
-    title: "Clay Pot Kitchen Utensil Set",
-    description: "Traditional earthenware for authentic Assamese cooking.",
-    price: 89900n,
-    discountPercent: 15n,
-    imageUrls: ["/assets/generated/product-clay-pot.dim_400x400.jpg"],
-    category: 8n,
-    subCategory: "Clay",
-    rating: 43n,
-    reviewCount: 42n,
-    stock: 12n,
-    brand: "Hajo Pottery",
-    tags: ["clay"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 6n,
-    title: "Bhut Jolokia Pickle — 250g",
-    description: "Authentic ghost chilli pickle — fiery & tangy.",
-    price: 22000n,
-    discountPercent: 0n,
-    imageUrls: [
-      "/assets/generated/product-bhut-jolokia-pickle.dim_400x400.jpg",
-    ],
-    category: 2n,
-    subCategory: "Pickle",
-    rating: 46n,
-    reviewCount: 720n,
-    stock: 75n,
-    brand: "Tezpur Spice House",
-    tags: ["pickle"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 7n,
-    title: "Assam Orthodox Green Tea — 100g",
-    description: "First flush green tea with light floral notes.",
-    price: 35000n,
-    discountPercent: 12n,
-    imageUrls: ["/assets/generated/product-green-tea.dim_400x400.jpg"],
-    category: 1n,
-    subCategory: "Green",
-    rating: 45n,
-    reviewCount: 234n,
-    stock: 60n,
-    brand: "Dibrugarh Estates",
-    tags: ["tea", "green"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 8n,
-    title: "Traditional Gamosa — Handwoven",
-    description: "Sacred Assamese cotton towel with red border motifs.",
-    price: 24900n,
-    discountPercent: 0n,
-    imageUrls: ["/assets/generated/product-gamosa.dim_400x400.jpg"],
-    category: 3n,
-    subCategory: "Gamosa",
-    rating: 50n,
-    reviewCount: 88n,
-    stock: 45n,
-    brand: "Sualkuchi Weavers",
-    tags: ["handloom"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-];
-
-const NEW_ARRIVAL_PRODUCTS: Product[] = [
-  {
-    id: 9n,
-    title: "Mustard Oil Cold Pressed — 500ml",
-    description: "Pure traditional Assamese mustard oil.",
-    price: 32000n,
-    discountPercent: 5n,
-    imageUrls: ["/assets/generated/product-mustard-oil.dim_400x400.jpg"],
-    category: 5n,
-    subCategory: "Oil",
-    rating: 44n,
-    reviewCount: 156n,
-    stock: 80n,
-    brand: "Nagaon Naturals",
-    tags: ["oil", "food"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 10n,
-    title: "Assam Bhut Jolokia Sauce — 200ml",
-    description: "Ghost pepper hot sauce with local spices.",
-    price: 18500n,
-    discountPercent: 0n,
-    imageUrls: [
-      "/assets/generated/product-bhut-jolokia-pickle.dim_400x400.jpg",
-    ],
-    category: 2n,
-    subCategory: "Sauce",
-    rating: 46n,
-    reviewCount: 42n,
-    stock: 35n,
-    brand: "Tezpur Spice House",
-    tags: ["sauce", "spicy"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 11n,
-    title: "Bamboo Serving Tray — Large",
-    description: "Hand-polished natural bamboo dining tray.",
-    price: 67900n,
-    discountPercent: 10n,
-    imageUrls: ["/assets/generated/product-bamboo-basket.dim_400x400.jpg"],
-    category: 8n,
-    subCategory: "Tray",
-    rating: 41n,
-    reviewCount: 29n,
-    stock: 18n,
-    brand: "Bongaigaon Crafts",
-    tags: ["bamboo", "kitchen"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 12n,
-    title: "Joha Rice Premium — 5 kg",
-    description: "Festival-grade Joha rice from certified farms.",
-    price: 82000n,
-    discountPercent: 5n,
-    imageUrls: ["/assets/generated/product-joha-rice.dim_400x400.jpg"],
-    category: 5n,
-    subCategory: "Rice",
-    rating: 49n,
-    reviewCount: 190n,
-    stock: 100n,
-    brand: "Kamrup Organics",
-    tags: ["rice", "organic"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 13n,
-    title: "Heritage Assam Tea Gift Box",
-    description: "Curated selection of 4 premium Assam teas.",
-    price: 149900n,
-    discountPercent: 8n,
-    imageUrls: ["/assets/generated/product-ctc-tea.dim_400x400.jpg"],
-    category: 1n,
-    subCategory: "Gift",
-    rating: 48n,
-    reviewCount: 67n,
-    stock: 20n,
-    brand: "Heritage Tea Co.",
-    tags: ["tea", "gift"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
-  },
-  {
-    id: 14n,
-    title: "Silk Stole — Muga & Eri Blend",
-    description: "Soft handwoven stole with traditional Assamese patterns.",
-    price: 185000n,
-    discountPercent: 0n,
-    imageUrls: ["/assets/generated/product-mekhela-chador.dim_400x400.jpg"],
-    category: 3n,
-    subCategory: "Stole",
-    rating: 46n,
-    reviewCount: 53n,
-    stock: 12n,
-    brand: "Majuli Weavers",
-    tags: ["silk", "handloom"],
-    isActive: true,
-    createdAt: 0n,
-    updatedAt: 0n,
   },
 ];
 
@@ -379,25 +69,29 @@ const SHOP_BY_CATEGORY_FEATURED = [
   {
     slug: "assam-tea",
     name: "Assam Tea",
-    image: "/assets/generated/category-tea.dim_400x400.jpg",
+    image:
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
     tag: "Bestseller",
   },
   {
     slug: "handloom-textiles",
     name: "Handloom",
-    image: "/assets/generated/category-handloom.dim_400x400.jpg",
+    image:
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&q=80",
     tag: "Trending",
   },
   {
     slug: "spices-herbs",
     name: "Spices",
-    image: "/assets/generated/category-spices.dim_400x400.jpg",
+    image:
+      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&q=80",
     tag: "Hot 🌶️",
   },
   {
     slug: "handicrafts",
     name: "Handicrafts",
-    image: "/assets/generated/category-crafts.dim_400x400.jpg",
+    image:
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
     tag: "Handmade",
   },
 ];
@@ -459,32 +153,63 @@ function ProductRowSkeleton() {
   );
 }
 
+function CategoryTilesSkeleton() {
+  return (
+    <div className="grid grid-cols-4 gap-2 px-4">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="flex flex-col items-center gap-1.5">
+          <Skeleton className="w-12 h-12 rounded-lg" />
+          <Skeleton className="h-2.5 w-10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Hero Banner Carousel ────────────────────────────────────────────────────
 
 function HeroBannerCarousel() {
+  const { data: fetchedBanners, isLoading } = useHeroBanners();
+  const banners =
+    fetchedBanners && fetchedBanners.length > 0
+      ? fetchedBanners
+      : FALLBACK_BANNERS;
+
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startTimer = useCallback(() => {
+  const startTimer = useCallback((count: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setActive((prev) => (prev + 1) % HERO_BANNERS.length);
+      setActive((prev) => (prev + 1) % count);
     }, 4000);
   }, []);
 
   useEffect(() => {
-    startTimer();
+    if (banners.length > 0) {
+      setActive(0);
+      startTimer(banners.length);
+    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [startTimer]);
+  }, [banners.length, startTimer]);
 
   const goTo = (idx: number) => {
     setActive(idx);
-    startTimer();
+    startTimer(banners.length);
   };
 
-  const banner = HERO_BANNERS[active];
+  if (isLoading) {
+    return (
+      <div className="mx-4 rounded-2xl overflow-hidden">
+        <Skeleton className="w-full aspect-[16/7] rounded-2xl" />
+      </div>
+    );
+  }
+
+  const banner = banners[active] ?? banners[0];
+  if (!banner) return null;
 
   return (
     <div
@@ -492,29 +217,21 @@ function HeroBannerCarousel() {
       data-ocid="hero-banner-carousel"
     >
       <div className="relative aspect-[16/7] w-full">
-        {HERO_BANNERS.map((b, i) => (
+        {banners.map((b, i) => (
           <div
-            key={b.id}
+            key={b.id.toString()}
             className={`absolute inset-0 transition-opacity duration-700 ${i === active ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
             <img
-              src={b.image}
+              src={b.imageUrl}
               alt={b.title}
               className="w-full h-full object-cover"
               loading={i === 0 ? "eager" : "lazy"}
             />
-            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/30 to-transparent" />
           </div>
         ))}
-
-        {/* Text content */}
         <div className="absolute inset-0 flex flex-col justify-center px-5 py-4">
-          <Badge
-            className={`self-start text-[10px] font-bold px-2 py-0.5 mb-2 border-0 ${banner.badgeColor}`}
-          >
-            {banner.badge}
-          </Badge>
           <h1 className="font-display text-lg font-black text-card leading-snug whitespace-pre-line mb-1">
             {banner.title}
           </h1>
@@ -523,20 +240,18 @@ function HeroBannerCarousel() {
           </p>
           <Link
             to="/categories/$slug"
-            params={{ slug: banner.slug }}
+            params={{ slug: banner.ctaSlug }}
             className="self-start bg-primary text-primary-foreground text-xs font-bold px-4 py-2 rounded-full hover:opacity-90 active:scale-95 transition-smooth"
-            data-ocid={`hero-cta-${banner.slug}`}
+            data-ocid={`hero-cta-${banner.ctaSlug}`}
           >
-            {banner.cta}
+            {banner.ctaText}
           </Link>
         </div>
       </div>
-
-      {/* Dot indicators */}
       <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
-        {HERO_BANNERS.map((b, i) => (
+        {banners.map((b, i) => (
           <button
-            key={b.id}
+            key={b.id.toString()}
             type="button"
             onClick={() => goTo(i)}
             aria-label={`Go to slide ${i + 1}`}
@@ -568,24 +283,6 @@ function DealsStrip() {
   );
 }
 
-// ─── Category Tiles Row ───────────────────────────────────────────────────────
-
-function CategoryTilesRow() {
-  return (
-    <section aria-label="Browse categories">
-      <SectionHeaderNoSearch title="Shop by Category" to="/categories" />
-      <div
-        className="grid grid-cols-4 gap-2 px-4"
-        data-ocid="category-tiles-grid"
-      >
-        {CATEGORIES.map((cat) => (
-          <CategoryTile key={cat.id.toString()} category={cat} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 // ─── Horizontal Product Row ───────────────────────────────────────────────────
 
 interface ProductRowProps {
@@ -604,7 +301,12 @@ function HorizontalProductRow({
   getQuantity,
 }: ProductRowProps) {
   if (isLoading) return <ProductRowSkeleton />;
-
+  if (products.length === 0)
+    return (
+      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+        No products yet — check back soon!
+      </div>
+    );
   return (
     <div
       className="flex gap-3 px-4 overflow-x-auto pb-1 scrollbar-none"
@@ -632,7 +334,7 @@ function PromoBanner() {
       <Link to="/categories/$slug" params={{ slug: "assam-tea" }}>
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-border">
           <img
-            src="/assets/generated/promo-tea-collection.dim_900x300.jpg"
+            src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=900&q=80"
             alt="Explore Assam Tea"
             className="w-full object-cover h-36"
             loading="lazy"
@@ -704,7 +406,6 @@ function TrustBadges() {
     { icon: Truck, label: "Pan-India Delivery", sub: "Fast & reliable" },
     { icon: Flame, label: "Fresh Arrivals", sub: "Every week" },
   ];
-
   return (
     <section className="px-4" aria-label="Why shop with us">
       <div className="grid grid-cols-3 gap-2">
@@ -727,10 +428,327 @@ function TrustBadges() {
   );
 }
 
+// ─── Featured Block Modal ─────────────────────────────────────────────────────
+
+function FeaturedBlockModal({
+  block,
+  onClose,
+}: {
+  block: FeaturedBlock;
+  onClose: () => void;
+}) {
+  // Trap focus & close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <dialog
+      open
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center w-full h-full m-0 max-w-none max-h-none bg-transparent p-0 border-0"
+      data-ocid="featured-block.dialog"
+      aria-label={block.title}
+    >
+      {/* Backdrop */}
+      <button
+        type="button"
+        className="absolute inset-0 bg-foreground/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close"
+      />
+
+      {/* Modal panel */}
+      <div className="relative z-10 bg-card w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl">
+        {/* Close button */}
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+          <h2 className="font-display text-base font-bold text-foreground line-clamp-1">
+            {block.title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors"
+            aria-label="Close"
+            data-ocid="featured-block.close_button"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="px-4 py-4 space-y-4">
+          {/* Content images grid */}
+          {block.contentImages && block.contentImages.length > 0 && (
+            <div
+              className={`grid gap-2 ${block.contentImages.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
+            >
+              {block.contentImages.map((imgUrl, idx) => (
+                <img
+                  key={imgUrl || idx.toString()}
+                  src={imgUrl}
+                  alt={`${block.title} ${idx + 1}`}
+                  className="w-full rounded-xl object-cover aspect-video"
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Rich HTML content */}
+          {block.content && (
+            <div
+              className="prose prose-sm max-w-none text-foreground [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_a]:text-primary [&_img]:rounded-xl [&_img]:w-full"
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: admin-controlled HTML content
+              dangerouslySetInnerHTML={{ __html: block.content }}
+            />
+          )}
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
+// ─── Featured Blocks Row Skeleton ─────────────────────────────────────────────
+
+function FeaturedBlocksSkeleton() {
+  return (
+    <div className="flex gap-3 px-4 overflow-hidden">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex-none w-36">
+          <Skeleton className="h-24 w-full rounded-xl mb-2" />
+          <Skeleton className="h-3 w-4/5 mb-1" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Stories & Highlights Section ────────────────────────────────────────────
+
+function StoriesHighlights() {
+  const { data: blocks, isLoading } = useFeaturedBlocks();
+  const [activeBlock, setActiveBlock] = useState<FeaturedBlock | null>(null);
+
+  if (isLoading) {
+    return (
+      <section aria-label="Stories and highlights" className="pt-1">
+        <div className="flex items-center px-4 mb-3">
+          <h2 className="font-display text-base font-bold text-foreground">
+            📖 Stories &amp; Highlights
+          </h2>
+        </div>
+        <FeaturedBlocksSkeleton />
+      </section>
+    );
+  }
+
+  if (!blocks || blocks.length === 0) return null;
+
+  return (
+    <>
+      <section
+        aria-label="Stories and highlights"
+        className="pt-1"
+        data-ocid="stories-highlights.section"
+      >
+        <div className="flex items-center justify-between px-4 mb-3">
+          <h2 className="font-display text-base font-bold text-foreground">
+            📖 Stories &amp; Highlights
+          </h2>
+        </div>
+        <div
+          className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-none"
+          data-ocid="stories-highlights.list"
+        >
+          {blocks.map((block, idx) => (
+            <button
+              type="button"
+              key={block.id.toString()}
+              onClick={() => setActiveBlock(block)}
+              className="flex-none w-36 text-left group active:scale-[0.97] transition-smooth"
+              data-ocid={`stories-highlights.item.${idx + 1}`}
+            >
+              <div className="relative rounded-xl overflow-hidden border border-border shadow-sm aspect-[3/2] mb-2 group-hover:shadow-md transition-shadow">
+                {block.thumbnailUrl ? (
+                  <img
+                    src={block.thumbnailUrl}
+                    alt={block.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-smooth"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center text-2xl">
+                    📖
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-foreground/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-card/80 flex items-center justify-center shadow">
+                  <ChevronRight size={11} className="text-foreground" />
+                </div>
+              </div>
+              <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2 px-0.5">
+                {block.title}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {activeBlock && (
+        <FeaturedBlockModal
+          block={activeBlock}
+          onClose={() => setActiveBlock(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Video Byte Section ───────────────────────────────────────────────────────
+
+function isYouTubeUrl(url: string): boolean {
+  return /youtube\.com|youtu\.be/.test(url);
+}
+
+function getYouTubeEmbedUrl(url: string): string {
+  // Handle youtu.be/VIDEO_ID
+  const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
+  if (shortMatch)
+    return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${shortMatch[1]}`;
+  // Handle youtube.com/watch?v=VIDEO_ID
+  const longMatch = url.match(/[?&]v=([^?&]+)/);
+  if (longMatch)
+    return `https://www.youtube.com/embed/${longMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${longMatch[1]}`;
+  return url;
+}
+
+function VideoByteSection() {
+  const { data: videoByte, isLoading } = useVideoByte();
+  const hasVideo = !isLoading && videoByte?.enabled && videoByte.url;
+
+  return (
+    <section
+      aria-label="Our Story video"
+      className="px-4"
+      data-ocid="video-byte.section"
+    >
+      {/* Section heading */}
+      <div className="flex items-center gap-2 mb-3 px-0">
+        <h2 className="font-display text-base font-bold text-foreground">
+          🎬 Our Story
+        </h2>
+      </div>
+
+      {/* Video container with diagonal Assamese gradient */}
+      <div
+        className="relative rounded-2xl overflow-hidden shadow-lg"
+        style={{
+          background:
+            "linear-gradient(135deg, #C0392B 0%, #8B1A1A 30%, #7D5A00 70%, #D4A017 100%)",
+        }}
+      >
+        {/* AssamRoots branding overlay at top */}
+        <div className="relative z-10 px-5 pt-5 pb-3 flex items-center gap-2">
+          <div className="flex-1">
+            <p
+              className="font-display font-black text-3xl md:text-5xl text-white leading-none tracking-tight"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+            >
+              AssamRoots
+            </p>
+            <p className="text-white/70 text-xs mt-1 font-medium tracking-wide">
+              Authentic Assam, Delivered to Your Door
+            </p>
+          </div>
+        </div>
+
+        {/* Video or placeholder */}
+        <div className="relative mx-4 mb-5 rounded-xl overflow-hidden bg-black/30">
+          {isLoading ? (
+            <div className="aspect-video flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+            </div>
+          ) : hasVideo ? (
+            isYouTubeUrl(videoByte!.url) ? (
+              <iframe
+                src={getYouTubeEmbedUrl(videoByte!.url)}
+                title={videoByte!.title || "AssamRoots Story"}
+                className="w-full aspect-video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video
+                src={videoByte!.url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full aspect-video object-cover"
+                title={videoByte!.title || "AssamRoots Story"}
+              />
+            )
+          ) : (
+            /* Placeholder when no video set */
+            <div
+              className="aspect-video flex flex-col items-center justify-center gap-3 bg-black/20"
+              data-ocid="video-byte.empty_state"
+            >
+              <div className="w-16 h-16 rounded-full bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                <Play size={28} className="text-white ml-1" />
+              </div>
+              <p className="text-white/80 text-sm font-semibold">
+                Video coming soon…
+              </p>
+              <p className="text-white/50 text-xs text-center px-4">
+                Our story and the heart behind AssamRoots
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Decorative bottom accent */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{
+            background: "linear-gradient(90deg, #D4A017, #C0392B, #2D6A4F)",
+          }}
+        />
+      </div>
+    </section>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { addItem, isInCart, getQuantity } = useCart();
+
+  const { data: categories, isLoading: catsLoading } = useCategories();
+  const { data: allProducts, isLoading: prodsLoading } = useProducts({
+    limit: 50,
+  });
+
+  // First 8 categories for the tile grid
+  const homeCategories = (categories ?? []).slice(0, 8);
+
+  // Best sellers: products with highest rating (top 8)
+  const bestSellers = [...(allProducts ?? [])]
+    .sort((a, b) => Number(b.rating) - Number(a.rating))
+    .slice(0, 8);
+
+  // New arrivals: most recently created (top 6)
+  const newArrivals = [...(allProducts ?? [])]
+    .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+    .slice(0, 6);
 
   const handleAddToCart = useCallback(
     (product: Product) => {
@@ -746,52 +764,67 @@ export default function HomePage() {
   return (
     <Layout>
       <div className="py-3 space-y-6">
-        {/* Deals strip */}
         <DealsStrip />
 
-        {/* Hero banner carousel */}
         <section aria-label="Featured promotions">
           <HeroBannerCarousel />
         </section>
 
-        {/* Category tiles — all 8 visible in 4x2 grid */}
-        <CategoryTilesRow />
+        {/* Category tiles */}
+        <section aria-label="Browse categories">
+          <SectionHeaderNoSearch title="Shop by Category" to="/categories" />
+          {catsLoading ? (
+            <CategoryTilesSkeleton />
+          ) : homeCategories.length > 0 ? (
+            <div
+              className="grid grid-cols-4 gap-2 px-4"
+              data-ocid="category-tiles-grid"
+            >
+              {homeCategories.map((cat) => (
+                <CategoryTile key={cat.id.toString()} category={cat} compact />
+              ))}
+            </div>
+          ) : (
+            <CategoryTilesSkeleton />
+          )}
+        </section>
 
-        {/* Bestsellers — horizontal scroll */}
         <section
           aria-label="Bestsellers"
           className="bg-muted/20 pt-4 pb-2 rounded-2xl mx-2"
         >
           <SectionHeader title="🔥 Bestsellers" to="/products" />
           <HorizontalProductRow
-            products={BESTSELLER_PRODUCTS}
+            products={bestSellers}
+            isLoading={prodsLoading}
             onAddToCart={handleAddToCart}
             isInCart={isInCart}
             getQuantity={getQuantity}
           />
         </section>
 
-        {/* New arrivals — horizontal scroll */}
         <section aria-label="New arrivals" className="pt-1">
           <SectionHeader title="✨ New Arrivals" to="/products" />
           <HorizontalProductRow
-            products={NEW_ARRIVAL_PRODUCTS}
+            products={newArrivals}
+            isLoading={prodsLoading}
             onAddToCart={handleAddToCart}
             isInCart={isInCart}
             getQuantity={getQuantity}
           />
         </section>
 
-        {/* Promo banner */}
         <PromoBanner />
-
-        {/* Shop by category - 2x2 image grid */}
         <ShopByCategoryGrid />
 
-        {/* Trust badges */}
+        {/* Stories & Highlights — admin-managed featured content blocks */}
+        <StoriesHighlights />
+
+        {/* Video Byte — Our Story section */}
+        <VideoByteSection />
+
         <TrustBadges />
 
-        {/* CTA to view all products */}
         <div className="px-4 pb-2">
           <Link
             to="/products"

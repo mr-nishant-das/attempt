@@ -106,6 +106,16 @@ export interface User {
   orders: Order[];
 }
 
+// ─── Site Settings ────────────────────────────────────────────────────────────
+
+export interface SiteSettings {
+  logoUrl: string | null;
+  faviconUrl: string | null;
+}
+
+export const SITE_SETTINGS_KEY = "assamroots_site_settings";
+export const SITE_SETTINGS_EVENT = "assamroots_settings_changed";
+
 // ─── UI Helpers ────────────────────────────────────────────────────────────
 
 /** Convert backend bigint price (paise) to display rupees */

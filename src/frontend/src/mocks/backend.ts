@@ -1,4 +1,4 @@
-import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult, ServiceRequestPublic, CreateServiceRequestInput } from "../backend";
+import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult, ServiceRequestPublic, CreateServiceRequestInput, _ImmutableObjectStorageCreateCertificateResult, _ImmutableObjectStorageRefillInformation, _ImmutableObjectStorageRefillResult, HeroBanner, FeaturedBlock } from "../backend";
 import { OrderStatus, ServiceRequestStatus } from "../backend";
 import type { Principal } from "@icp-sdk/core/principal";
 
@@ -11,7 +11,12 @@ const sampleCategories: Category[] = [
     slug: "assam-tea",
     description: "World-famous Assam black tea and specialty blends",
     imageUrl: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400",
-    subCategories: ["CTC Tea", "Orthodox Tea", "Green Tea", "White Tea"],
+    subCategories: [
+      { id: 1n, name: "CTC Tea", imageUrl: "" },
+      { id: 2n, name: "Orthodox Tea", imageUrl: "" },
+      { id: 3n, name: "Green Tea", imageUrl: "" },
+      { id: 4n, name: "White Tea", imageUrl: "" },
+    ],
   },
   {
     id: BigInt(2),
@@ -19,7 +24,12 @@ const sampleCategories: Category[] = [
     slug: "handloom",
     description: "Traditional Assamese handloom sarees and fabrics",
     imageUrl: "https://images.unsplash.com/photo-1583391733975-a1cf4f358d79?w=400",
-    subCategories: ["Mekhela Sador", "Gamosa", "Silk", "Cotton"],
+    subCategories: [
+      { id: 5n, name: "Mekhela Sador", imageUrl: "" },
+      { id: 6n, name: "Gamosa", imageUrl: "" },
+      { id: 7n, name: "Silk", imageUrl: "" },
+      { id: 8n, name: "Cotton", imageUrl: "" },
+    ],
   },
   {
     id: BigInt(3),
@@ -27,7 +37,12 @@ const sampleCategories: Category[] = [
     slug: "handicrafts",
     description: "Authentic Assamese handicrafts and artifacts",
     imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400",
-    subCategories: ["Bamboo", "Cane", "Bell Metal", "Pottery"],
+    subCategories: [
+      { id: 9n, name: "Bamboo", imageUrl: "" },
+      { id: 10n, name: "Cane", imageUrl: "" },
+      { id: 11n, name: "Bell Metal", imageUrl: "" },
+      { id: 12n, name: "Pottery", imageUrl: "" },
+    ],
   },
   {
     id: BigInt(4),
@@ -35,7 +50,12 @@ const sampleCategories: Category[] = [
     slug: "spices-foods",
     description: "Fresh Assamese spices, pickles, and local foods",
     imageUrl: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400",
-    subCategories: ["Spices", "Pickles", "Mustard Oil", "Dried Fish"],
+    subCategories: [
+      { id: 13n, name: "Spices", imageUrl: "" },
+      { id: 14n, name: "Pickles", imageUrl: "" },
+      { id: 15n, name: "Mustard Oil", imageUrl: "" },
+      { id: 16n, name: "Dried Fish", imageUrl: "" },
+    ],
   },
   {
     id: BigInt(5),
@@ -43,7 +63,12 @@ const sampleCategories: Category[] = [
     slug: "books",
     description: "Assamese literature, history, and cultural books",
     imageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400",
-    subCategories: ["Fiction", "Non-fiction", "Poetry", "Children"],
+    subCategories: [
+      { id: 17n, name: "Fiction", imageUrl: "" },
+      { id: 18n, name: "Non-fiction", imageUrl: "" },
+      { id: 19n, name: "Poetry", imageUrl: "" },
+      { id: 20n, name: "Children", imageUrl: "" },
+    ],
   },
   {
     id: BigInt(6),
@@ -51,7 +76,12 @@ const sampleCategories: Category[] = [
     slug: "organic",
     description: "Farm-fresh organic fruits and vegetables from Assam",
     imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400",
-    subCategories: ["Fruits", "Vegetables", "Herbs", "Rice"],
+    subCategories: [
+      { id: 21n, name: "Fruits", imageUrl: "" },
+      { id: 22n, name: "Vegetables", imageUrl: "" },
+      { id: 23n, name: "Herbs", imageUrl: "" },
+      { id: 24n, name: "Rice", imageUrl: "" },
+    ],
   },
 ];
 
@@ -241,6 +271,14 @@ export const mockBackend: backendInterface = {
   },
   getProduct: async (id) => sampleProducts.find(p => p.id === id) ?? null,
 
+  adminGetCategories: async () => sampleCategories,
+  adminAddCategory: async (_name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminUpdateCategory: async (_id, _name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminDeleteCategory: async (_id) => ({ __kind__: "ok" as const, ok: true }),
+  adminAddSubCategory: async (_categoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminUpdateSubCategory: async (_categoryId, _subCategoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminDeleteSubCategory: async (_categoryId, _subCategoryId) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+
   adminAddProduct: async (_input) => sampleProducts[0],
   adminUpdateProduct: async (_id, _input) => sampleProducts[0],
   adminDeleteProduct: async (_id) => true,
@@ -262,7 +300,10 @@ export const mockBackend: backendInterface = {
   createOrder: async (_input) => ({
     id: BigInt(1),
     status: OrderStatus.Confirmed,
-    deliveryAddress: { city: "Guwahati", name: "Anurag Sharma", line1: "MG Road", line2: "", state: "Assam", phone: "+91 98765 43210", pincode: "781001" },
+    deliveryAddress: { name: "Anurag Sharma", phone: "+91 98765 43210", houseNo: "12", street: "MG Road", locality: "Paltan Bazar", landmark: "", city: "Guwahati", district: "Kamrup Metropolitan", state: "Assam", pincode: "781001" },
+    paymentMethod: "Cash on Delivery",
+    deliveryType: { Standard: null } as unknown as OrderPublic["deliveryType"],
+    deliveryCost: BigInt(5900),
     shipmentUpdates: [],
     userId: samplePrincipal,
     createdAt: BigInt(Date.now()),
@@ -298,4 +339,70 @@ export const mockBackend: backendInterface = {
   adminGetServiceRequests: async (): Promise<ServiceRequestPublic[]> => [],
   adminUpdateServiceRequestStatus: async (_id, _status) => null,
   adminDeleteServiceRequest: async (_id) => true,
+
+  adminRegisterImageHash: async (_hash: string): Promise<string> => _hash,
+
+  listHeroBanners: async (): Promise<HeroBanner[]> => [],
+  getHeroBanner: async (_id): Promise<HeroBanner | null> => null,
+  listFeaturedBlocks: async (): Promise<FeaturedBlock[]> => [],
+  getFeaturedBlock: async (_id): Promise<FeaturedBlock | null> => null,
+
+  adminListHeroBanners: async (): Promise<HeroBanner[]> => [],
+  adminAddHeroBanner: async (_input) => ({ id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" }),
+  adminUpdateHeroBanner: async (_id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" } }),
+  adminDeleteHeroBanner: async (_id) => ({ __kind__: "ok" as const, ok: true }),
+  adminReorderHeroBanner: async (_id, _newOrder) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" } }),
+
+  adminListFeaturedBlocks: async (): Promise<FeaturedBlock[]> => [],
+  adminAddFeaturedBlock: async (_input) => ({ id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] }),
+  adminUpdateFeaturedBlock: async (_id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] } }),
+  adminDeleteFeaturedBlock: async (_id) => ({ __kind__: "ok" as const, ok: true }),
+
+  _immutableObjectStorageBlobsAreLive: async (_hashes: Array<Uint8Array>): Promise<Array<boolean>> =>
+    _hashes.map(() => true),
+
+  _immutableObjectStorageBlobsToDelete: async (): Promise<Array<Uint8Array>> => [],
+
+  _immutableObjectStorageConfirmBlobDeletion: async (_blobs: Array<Uint8Array>): Promise<void> => undefined,
+
+  _immutableObjectStorageCreateCertificate: async (_blobHash: string): Promise<_ImmutableObjectStorageCreateCertificateResult> => ({
+    method: "stub",
+    blob_hash: _blobHash,
+  }),
+
+  _immutableObjectStorageRefillCashier: async (_refillInformation: _ImmutableObjectStorageRefillInformation | null): Promise<_ImmutableObjectStorageRefillResult> => ({
+    success: true,
+    topped_up_amount: BigInt(0),
+  }),
+
+  _immutableObjectStorageUpdateGatewayPrincipals: async (): Promise<void> => undefined,
+
+  createRazorpayOrder: async (_amount, _receipt) => ({
+    __kind__: "ok" as const,
+    ok: { orderId: "order_mock123", amount: _amount, currency: "INR" },
+  }),
+
+  razorpayTransform: async (input) => input as unknown as ReturnType<backendInterface["razorpayTransform"]> extends Promise<infer T> ? T : never,
+
+  verifyRazorpayPayment: async (_orderId, _paymentId, _signature) => ({
+    __kind__: "ok" as const,
+    ok: true,
+  }),
+
+  getSiteSettings: async () => ({ logoUrl: undefined, faviconUrl: undefined }),
+
+  adminUpdateSiteSettings: async (logoUrl, faviconUrl) => ({
+    logoUrl: logoUrl ?? undefined,
+    faviconUrl: faviconUrl ?? undefined,
+  }),
+
+  adminLogin: async (_userId, _passcode) => null,
+  adminLogout: async (_token) => undefined,
+  isAdminSession: async (_token) => false,
+
+  getVideoByte: async () => ({ url: "", title: "AssamRoots", enabled: false }),
+  adminUpdateVideoByte: async (_url, _enabled, _title) => undefined,
+
+  getServicesAvailability: async () => ({ available: true, message: "" }),
+  adminUpdateServicesAvailability: async (_available, _message) => undefined,
 };

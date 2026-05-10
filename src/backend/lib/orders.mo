@@ -9,10 +9,18 @@ module {
   public type OrderPublic = Types.OrderPublic;
   public type OrderId = Types.OrderId;
   public type OrderStatus = Types.OrderStatus;
+  public type DeliveryType = Types.DeliveryType;
   public type OrderItem = Types.OrderItem;
   public type DeliveryAddress = Types.DeliveryAddress;
   public type ShipmentUpdate = Types.ShipmentUpdate;
   public type CreateOrderInput = Types.CreateOrderInput;
+
+  public func deliveryTypeToText(dt : DeliveryType) : Text {
+    switch (dt) {
+      case (#Express) "Express Delivery";
+      case (#Standard) "Standard Delivery";
+    };
+  };
 
   public func toPublic(o : Order) : OrderPublic {
     {
@@ -20,6 +28,9 @@ module {
       userId = o.userId;
       items = o.items;
       deliveryAddress = o.deliveryAddress;
+      paymentMethod = o.paymentMethod;
+      deliveryType = o.deliveryType;
+      deliveryCost = o.deliveryCost;
       status = o.status;
       shipmentUpdates = o.shipmentUpdates;
       totalAmount = o.totalAmount;
@@ -55,6 +66,9 @@ module {
       userId;
       items = resolvedItems;
       deliveryAddress = input.deliveryAddress;
+      paymentMethod = input.paymentMethod;
+      deliveryType = input.deliveryType;
+      deliveryCost = input.deliveryCost;
       var status = #Processing;
       var shipmentUpdates = [{
         status = #Processing;

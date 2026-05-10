@@ -1,75 +1,35 @@
-import List "mo:core/List";
-import NewTypes "./types/services";
+// Migration: expand siteSettings to include new optional fields, and drop nextOrderId.
+// Old stable fields (from .old/src/backend/dist/backend.most):
+//   stable var nextOrderId : Nat
+//   stable var siteSettings : {faviconUrl : ?Text; logoUrl : ?Text}
+// New stable fields:
+//   stable var siteSettings : SiteSettingsLib.SiteSettings (all new fields are ?T)
+import SiteSettingsLib "lib/site-settings";
 
 module {
-  // Old ServiceRequest type (before isRequestForSelf and recipient fields were added)
-  type OldServiceRequestStatus = {
-    #New;
-    #Contacted;
-    #Completed;
-    #Cancelled;
-  };
-
-  type OldServiceType = {
-    #Ambulance;
-    #Doctors;
-    #Medicines;
-    #FoodDelivery;
-    #Taxi;
-    #EventManagement;
-    #FuneralServices;
-    #WeddingsAnniversaries;
-    #Gifting;
-    #VideoConferencing;
-    #SchoolAdmissions;
-    #Tourism;
-    #Other;
-  };
-
-  type OldServiceRequest = {
-    id : Nat;
-    userId : Text;
-    userName : Text;
-    userPhone : Text;
-    serviceType : OldServiceType;
-    preferredDate : Text;
-    preferredTime : Text;
-    description : Text;
-    var status : OldServiceRequestStatus;
-    submittedAt : Int;
-    var lastUpdatedAt : Int;
-  };
+  // Old types defined inline (from .old/src/backend/lib/site-settings.mo)
+  type OldSiteSettings = { faviconUrl : ?Text; logoUrl : ?Text };
 
   type OldActor = {
-    serviceRequests : List.List<OldServiceRequest>;
+    var nextOrderId : Nat;
+    var siteSettings : OldSiteSettings;
   };
 
   type NewActor = {
-    serviceRequests : List.List<NewTypes.ServiceRequest>;
+    var siteSettings : SiteSettingsLib.SiteSettings;
   };
 
   public func run(old : OldActor) : NewActor {
-    let newRequests = List.empty<NewTypes.ServiceRequest>();
-    old.serviceRequests.forEach(func(r : OldServiceRequest) {
-      let migrated : NewTypes.ServiceRequest = {
-        id = r.id;
-        userId = r.userId;
-        userName = r.userName;
-        userPhone = r.userPhone;
-        serviceType = r.serviceType;
-        preferredDate = r.preferredDate;
-        preferredTime = r.preferredTime;
-        description = r.description;
-        isRequestForSelf = true;
-        recipientName = null;
-        recipientPhone = null;
-        recipientAddress = null;
-        var status = r.status;
-        submittedAt = r.submittedAt;
-        var lastUpdatedAt = r.lastUpdatedAt;
+    {
+      var siteSettings = {
+        faviconUrl = old.siteSettings.faviconUrl;
+        logoUrl = old.siteSettings.logoUrl;
+        servicesAvailable = ?false;
+        servicesUnavailableMessage = ?"Our services are temporarily unavailable but will resume soon. Thank you for your patience.";
+        videoByteEnabled = ?false;
+        videoByteTitle = ?"";
+        videoByteUrl = ?"";
       };
-      newRequests.add(migrated);
-    });
-    { serviceRequests = newRequests };
+    };
   };
 };
