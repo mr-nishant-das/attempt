@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useFooterSettings } from "@/hooks/useQueries";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -241,6 +242,11 @@ function SectionHeader({
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const { data: footerData } = useFooterSettings();
+  const tagline = footerData?.tagline || "Bringing Assam to the World";
+  const copyrightText =
+    footerData?.copyright ||
+    `© ${new Date().getFullYear()} AssamRoots. All rights reserved.`;
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* ── STICKY MINI HEADER ───────────────────────────────────────── */}
@@ -591,22 +597,22 @@ export default function LandingPage() {
       <footer className="bg-card border-t border-border px-4 py-5">
         <div className="max-w-2xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <Link to="/home" className="flex items-center gap-1.5">
+            <Link to="/home" className="flex items-center gap-2">
               <img
                 src="/assets/logo.png"
                 alt="AssamRoots"
                 className="h-8 w-auto object-contain"
               />
-              <span className="text-[10px] text-muted-foreground">
-                © {new Date().getFullYear()}
+              <span className="text-[11px] font-semibold text-muted-foreground italic">
+                {tagline}
               </span>
             </Link>
             <div className="flex items-center gap-4">
               {[
-                { label: "About", href: "/home" },
+                { label: "About", href: "/about" },
                 { label: "Products", href: "/products" },
                 { label: "Categories", href: "/categories" },
-                { label: "Contact", href: "/home" },
+                { label: "Reviews", href: "/reviews" },
               ].map((item) => (
                 <a
                   key={item.label}
@@ -618,21 +624,9 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-border text-center">
-            <p className="text-[11px] text-muted-foreground">
-              Built with love using{" "}
-              <a
-                href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
-                  typeof window !== "undefined" ? window.location.hostname : "",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                caffeine.ai
-              </a>
-            </p>
-          </div>
+          <p className="text-[10px] text-muted-foreground text-center mt-3">
+            {copyrightText}
+          </p>
         </div>
       </footer>
     </div>

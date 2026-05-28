@@ -1,4 +1,9 @@
 module {
+  public type HowItWorksStep = {
+    title : Text;
+    description : Text;
+  };
+
   public type SiteSettings = {
     logoUrl : ?Text;
     faviconUrl : ?Text;
@@ -8,7 +13,18 @@ module {
     videoByteUrl : ?Text;
     videoByteEnabled : ?Bool;
     videoByteTitle : ?Text;
+    // Hero section
+    heroTagline : ?Text;
+    heroSubtitle : ?Text;
+    // How it works steps
+    howitworksSteps : ?[HowItWorksStep];
   };
+
+  let DEFAULT_STEPS : [HowItWorksStep] = [
+    { title = "Browse our catalog"; description = "Explore 100+ authentic Assamese products — food, textiles, art, and more." },
+    { title = "Place your order"; description = "Add items to your cart, enter your delivery details, and choose your delivery speed." },
+    { title = "Delivered to your door"; description = "We ship directly to you, wherever you are in the world." },
+  ];
 
   public func empty() : SiteSettings {
     {
@@ -19,6 +35,9 @@ module {
       videoByteUrl = ?"";
       videoByteEnabled = ?false;
       videoByteTitle = ?"";
+      heroTagline = ?"Authentic Assam, Delivered Anywhere";
+      heroSubtitle = ?"Shop 100+ genuine Assamese products — from Muga silk to Assam tea — and get them delivered wherever you are.";
+      howitworksSteps = ?DEFAULT_STEPS;
     };
   };
 
@@ -45,6 +64,21 @@ module {
     switch (s.videoByteTitle) { case (?v) v; case null "" };
   };
 
+  public func getHeroTagline(s : SiteSettings) : Text {
+    switch (s.heroTagline) { case (?v) v; case null "Authentic Assam, Delivered Anywhere" };
+  };
+
+  public func getHeroSubtitle(s : SiteSettings) : Text {
+    switch (s.heroSubtitle) {
+      case (?v) v;
+      case null "Shop 100+ genuine Assamese products — from Muga silk to Assam tea — and get them delivered wherever you are.";
+    };
+  };
+
+  public func getHowitworksSteps(s : SiteSettings) : [HowItWorksStep] {
+    switch (s.howitworksSteps) { case (?v) v; case null DEFAULT_STEPS };
+  };
+
   public func update(
     current : SiteSettings,
     logoUrl : ?Text,
@@ -54,6 +88,20 @@ module {
       current with
       logoUrl = logoUrl;
       faviconUrl = faviconUrl;
+    };
+  };
+
+  public func updateHeroAndHowitworks(
+    current : SiteSettings,
+    heroTagline : Text,
+    heroSubtitle : Text,
+    howitworksSteps : [HowItWorksStep],
+  ) : SiteSettings {
+    {
+      current with
+      heroTagline = ?heroTagline;
+      heroSubtitle = ?heroSubtitle;
+      howitworksSteps = ?howitworksSteps;
     };
   };
 

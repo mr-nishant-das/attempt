@@ -1,4 +1,3 @@
-import Debug "mo:core/Debug";
 import Runtime "mo:core/Runtime";
 import UserLib "../lib/users";
 import List "mo:core/List";
@@ -17,7 +16,9 @@ mixin (
   /// The actual upload is performed by the frontend via the StorageClient; this
   /// call simply validates admin access and returns the hash for persistence.
   public shared ({ caller }) func adminRegisterImageHash(hash : Text) : async Text {
-    Debug.todo()
+    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (hash.size() == 0) Runtime.trap("Hash must be non-empty");
+    hash;
   };
 
 };

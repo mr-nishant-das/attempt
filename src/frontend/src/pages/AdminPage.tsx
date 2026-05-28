@@ -26,6 +26,8 @@ import {
   type HeroBannerInput,
   useAdminFeaturedBlocks,
   useAdminHeroBanners,
+  useFooterSettings,
+  useReviews,
   useSaveSiteSettings,
   useSiteSettings,
 } from "@/hooks/useQueries";
@@ -39,19 +41,26 @@ import {
   ChevronUp,
   Edit,
   FolderTree,
+  Globe,
+  Home,
   Image,
   KeyRound,
   Layers,
   LayoutGrid,
   LogOut,
+  MessageSquare,
   Package,
   Paintbrush,
   PercentCircle,
   Plus,
   RefreshCw,
   Save,
+  Search,
   ShieldCheck,
+  ShoppingCart,
+  Star,
   Trash2,
+  Truck,
   Video,
   Warehouse,
 } from "lucide-react";
@@ -60,6 +69,7 @@ import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AdminTab =
+  | "homepage"
   | "herobanners"
   | "featuredblocks"
   | "video"
@@ -69,7 +79,8 @@ type AdminTab =
   | "services"
   | "inventory"
   | "discounts"
-  | "branding";
+  | "branding"
+  | "footer";
 
 interface ProductFormValues {
   title: string;
@@ -401,6 +412,7 @@ function categoryToForm(c: Category): CategoryFormValues {
 
 // ─── Tab navigation ───────────────────────────────────────────────────────────
 const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
+  { id: "homepage", label: "Homepage", icon: <Home size={13} /> },
   { id: "herobanners", label: "Banners", icon: <Image size={13} /> },
   { id: "featuredblocks", label: "Stories", icon: <LayoutGrid size={13} /> },
   { id: "video", label: "Video", icon: <Video size={13} /> },
@@ -411,6 +423,7 @@ const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "inventory", label: "Inventory", icon: <Warehouse size={13} /> },
   { id: "discounts", label: "Discounts", icon: <PercentCircle size={13} /> },
   { id: "branding", label: "Branding", icon: <Paintbrush size={13} /> },
+  { id: "footer", label: "Footer", icon: <Globe size={13} /> },
 ];
 
 // ─── Hero Banners Panel ───────────────────────────────────────────────────────
@@ -3383,6 +3396,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab content */}
+        {activeTab === "homepage" && <HomepagePanel />}
         {activeTab === "herobanners" && <HeroBannersPanel />}
         {activeTab === "featuredblocks" && <FeaturedBlocksPanel />}
         {activeTab === "video" && <VideoBytePanel />}
@@ -3393,7 +3407,853 @@ export default function AdminPage() {
         {activeTab === "inventory" && <InventoryPanel />}
         {activeTab === "discounts" && <DiscountsPanel />}
         {activeTab === "branding" && <BrandingPanel />}
+        {activeTab === "footer" && <FooterPanel />}
       </div>
     </Layout>
+  );
+}
+
+// ─── Homepage Panel ──────────────────────────────────────────────────────────
+function HomepagePanel() {
+  const { actor, isFetching: actorFetching } = useActor(createActor);
+  const queryClient = useQueryClient();
+
+  const [heroTagline, setHeroTagline] = useState("");
+  const [heroSubtitle, setHeroSubtitle] = useState("");
+  const [steps, setSteps] = useState([
+    { id: "step-1", title: "", description: "" },
+    { id: "step-2", title: "", description: "" },
+    { id: "step-3", title: "", description: "" },
+  ]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!actor || actorFetching) return;
+    type ActorExt = {
+      getSiteSettings: () => Promise<{
+        heroTagline: string;
+        heroSubtitle: string;
+        howitworksSteps: Array<{ title: string; description: string }>;
+        logoUrl?: string;
+        faviconUrl?: string;
+      }>;
+    };
+    (actor as unknown as ActorExt)
+      .getSiteSettings()
+      .then((data) => {
+        setHeroTagline(data.heroTagline || "");
+        setHeroSubtitle(data.heroSubtitle || "");
+        if (data.howitworksSteps && data.howitworksSteps.length > 0) {
+          const filled = [...data.howitworksSteps];
+          while (filled.length < 3) filled.push({ title: "", description: "" });
+          setSteps(
+            filled.slice(0, 3).map((s, i) => ({ id: `step-${i + 1}`, ...s })),
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [actor, actorFetching]);
+
+  const updateStep = (
+    index: number,
+    field: "title" | "description",
+    value: string,
+  ) => {
+    setSteps((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    );
+  };
+
+  const handleSave = async () => {
+    if (!actor) return;
+    setSaving(true);
+    try {
+      type ActorExt = {
+        adminUpdateHeroAndHowitworks: (
+          heroTagline: string,
+          heroSubtitle: string,
+          howitworksSteps: Array<{ title: string; description: string }>,
+        ) => Promise<void>;
+      };
+      await (actor as unknown as ActorExt).adminUpdateHeroAndHowitworks(
+        heroTagline,
+        heroSubtitle,
+        steps,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
+      toast.success("Homepage content saved successfully");
+    } catch {
+      toast.error("Failed to save homepage content");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || actorFetching) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5" data-ocid="admin.homepage.panel">
+      {/* Hero Section */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Hero Section</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            The main headline and subtitle displayed at the top of the homepage.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="hero-tagline" className="text-xs font-semibold">
+            Tagline (Main Headline)
+          </Label>
+          <Input
+            id="hero-tagline"
+            value={heroTagline}
+            onChange={(e) => setHeroTagline(e.target.value)}
+            placeholder="Bringing Assam to the World"
+            className="h-9 text-sm"
+            data-ocid="admin.homepage.tagline_input"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Large display text shown on the hero banner.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="hero-subtitle" className="text-xs font-semibold">
+            Subtitle
+          </Label>
+          <Input
+            id="hero-subtitle"
+            value={heroSubtitle}
+            onChange={(e) => setHeroSubtitle(e.target.value)}
+            placeholder="Authentic Assamese products delivered to you, wherever you are."
+            className="h-9 text-sm"
+            data-ocid="admin.homepage.subtitle_input"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Supporting text shown below the tagline.
+          </p>
+        </div>
+      </div>
+
+      {/* How It Works Section */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">How It Works</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Three steps shown on the homepage to guide first-time visitors.
+          </p>
+        </div>
+
+        {steps.map((step, index) => (
+          <div
+            key={step.id}
+            className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/60"
+            data-ocid={`admin.homepage.step.${index + 1}`}
+          >
+            <p className="text-xs font-bold text-primary">Step {index + 1}</p>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={`step-title-${index}`}
+                className="text-xs font-semibold"
+              >
+                Title
+              </Label>
+              <Input
+                id={`step-title-${index}`}
+                value={step.title}
+                onChange={(e) => updateStep(index, "title", e.target.value)}
+                placeholder={
+                  [
+                    "Browse our catalog",
+                    "Place your order",
+                    "Delivered to you",
+                  ][index]
+                }
+                className="h-9 text-sm"
+                data-ocid={`admin.homepage.step_title.${index + 1}`}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={`step-desc-${index}`}
+                className="text-xs font-semibold"
+              >
+                Description
+              </Label>
+              <Input
+                id={`step-desc-${index}`}
+                value={step.description}
+                onChange={(e) =>
+                  updateStep(index, "description", e.target.value)
+                }
+                placeholder={
+                  [
+                    "Explore 100+ authentic Assamese products",
+                    "Secure checkout with COD or online payment",
+                    "Express or standard delivery, anywhere in India",
+                  ][index]
+                }
+                className="h-9 text-sm"
+                data-ocid={`admin.homepage.step_desc.${index + 1}`}
+              />
+            </div>
+          </div>
+        ))}
+
+        <Button
+          size="sm"
+          className="btn-primary border-0 w-full h-10 gap-1.5 font-semibold"
+          onClick={handleSave}
+          disabled={saving}
+          data-ocid="admin.homepage.save_button"
+          type="button"
+        >
+          <Save size={14} />
+          {saving ? "Saving…" : "Save Homepage Content"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Footer Panel ─────────────────────────────────────────────────────────────
+interface ReviewFormValues {
+  reviewerName: string;
+  rating: string;
+  reviewText: string;
+  productName: string;
+}
+
+const BLANK_REVIEW: ReviewFormValues = {
+  reviewerName: "",
+  rating: "5",
+  reviewText: "",
+  productName: "",
+};
+
+const SOCIAL_PLATFORMS = [
+  {
+    key: "instagram",
+    label: "Instagram",
+    placeholder: "https://instagram.com/assamroots",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    placeholder: "https://facebook.com/assamroots",
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    placeholder: "https://wa.me/919876543210",
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    placeholder: "https://youtube.com/@assamroots",
+  },
+];
+
+function FooterPanel() {
+  const { actor, isFetching: actorFetching } = useActor(createActor);
+  const queryClient = useQueryClient();
+  const { data: footerData, isLoading: footerLoading } = useFooterSettings();
+  const { data: reviews, isLoading: reviewsLoading } = useReviews();
+
+  // ── Branding fields ──
+  const [tagline, setTagline] = useState("");
+  const [copyright, setCopyright] = useState("");
+  const [aboutContent, setAboutContent] = useState("");
+  const [savingBranding, setSavingBranding] = useState(false);
+
+  // ── Social links ──
+  type SocialMap = Record<string, { url: string; enabled: boolean }>;
+  const [socialMap, setSocialMap] = useState<SocialMap>({});
+  const [savingSocials, setSavingSocials] = useState(false);
+
+  // ── Reviews ──
+  const [reviewForm, setReviewForm] = useState<ReviewFormValues>(BLANK_REVIEW);
+  const [addingReview, setAddingReview] = useState(false);
+  const [editReview, setEditReview] = useState<{
+    open: boolean;
+    id: bigint | null;
+    form: ReviewFormValues;
+  }>({ open: false, id: null, form: BLANK_REVIEW });
+  const [deletingId, setDeletingId] = useState<bigint | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<bigint | null>(null);
+
+  // Populate fields when data loads
+  useEffect(() => {
+    if (!footerData) return;
+    setTagline(footerData.tagline ?? "");
+    setCopyright(footerData.copyright ?? "");
+    setAboutContent(footerData.aboutContent ?? "");
+    const map: SocialMap = {};
+    for (const p of SOCIAL_PLATFORMS) {
+      const found = footerData.socialLinks?.find(
+        (s) => s.platform.toLowerCase() === p.key,
+      );
+      map[p.key] = { url: found?.url ?? "", enabled: found?.enabled ?? false };
+    }
+    setSocialMap(map);
+  }, [footerData]);
+
+  const buildSocialLinks = () =>
+    SOCIAL_PLATFORMS.map((p) => ({
+      platform: p.key,
+      url: socialMap[p.key]?.url ?? "",
+      enabled: socialMap[p.key]?.enabled ?? false,
+    }));
+
+  const handleSaveBranding = async () => {
+    if (!actor) return;
+    setSavingBranding(true);
+    try {
+      await actor.adminUpdateFooterSettings(
+        tagline,
+        copyright,
+        aboutContent,
+        buildSocialLinks(),
+      );
+      await queryClient.invalidateQueries({ queryKey: ["footerSettings"] });
+      toast.success("Footer branding saved");
+    } catch {
+      toast.error("Failed to save footer branding");
+    } finally {
+      setSavingBranding(false);
+    }
+  };
+
+  const handleSaveSocials = async () => {
+    if (!actor) return;
+    setSavingSocials(true);
+    try {
+      await actor.adminUpdateFooterSettings(
+        tagline,
+        copyright,
+        aboutContent,
+        buildSocialLinks(),
+      );
+      await queryClient.invalidateQueries({ queryKey: ["footerSettings"] });
+      toast.success("Social links saved");
+    } catch {
+      toast.error("Failed to save social links");
+    } finally {
+      setSavingSocials(false);
+    }
+  };
+
+  const handleAddReview = async () => {
+    if (
+      !actor ||
+      !reviewForm.reviewerName.trim() ||
+      !reviewForm.reviewText.trim()
+    )
+      return;
+    setAddingReview(true);
+    try {
+      await actor.adminAddReview(
+        reviewForm.reviewerName,
+        BigInt(Number.parseInt(reviewForm.rating) || 5),
+        reviewForm.reviewText,
+        reviewForm.productName,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["reviews"] });
+      toast.success("Review added");
+      setReviewForm(BLANK_REVIEW);
+    } catch {
+      toast.error("Failed to add review");
+    } finally {
+      setAddingReview(false);
+    }
+  };
+
+  const handleEditReview = async () => {
+    if (!actor || !editReview.id) return;
+    try {
+      await actor.adminUpdateReview(
+        editReview.id,
+        editReview.form.reviewerName,
+        BigInt(Number.parseInt(editReview.form.rating) || 5),
+        editReview.form.reviewText,
+        editReview.form.productName,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["reviews"] });
+      toast.success("Review updated");
+      setEditReview({ open: false, id: null, form: BLANK_REVIEW });
+    } catch {
+      toast.error("Failed to update review");
+    }
+  };
+
+  const handleDeleteReview = async (id: bigint) => {
+    if (!actor) return;
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setDeletingId(id);
+    try {
+      await actor.adminDeleteReview(id);
+      await queryClient.invalidateQueries({ queryKey: ["reviews"] });
+      toast.success("Review deleted");
+    } catch {
+      toast.error("Failed to delete review");
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  };
+
+  if (footerLoading || reviewsLoading || actorFetching) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6" data-ocid="admin.footer.panel">
+      {/* ── Branding sub-section ── */}
+      <div
+        className="bg-card border border-border rounded-xl p-4 space-y-4"
+        data-ocid="admin.footer.branding_section"
+      >
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Footer Branding
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Tagline and copyright text shown in the footer on every page.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="footer-tagline" className="text-xs font-semibold">
+            Tagline
+          </Label>
+          <Input
+            id="footer-tagline"
+            value={tagline}
+            onChange={(e) => setTagline(e.target.value)}
+            placeholder="Bringing Assam to the World"
+            className="h-9 text-sm"
+            data-ocid="admin.footer.tagline_input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="footer-copyright" className="text-xs font-semibold">
+            Copyright Text
+          </Label>
+          <Input
+            id="footer-copyright"
+            value={copyright}
+            onChange={(e) => setCopyright(e.target.value)}
+            placeholder={`© ${new Date().getFullYear()} AssamRoots. All rights reserved.`}
+            className="h-9 text-sm"
+            data-ocid="admin.footer.copyright_input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="footer-about" className="text-xs font-semibold">
+            About Page Content
+          </Label>
+          <p className="text-[10px] text-muted-foreground">
+            This text is shown on the /about page.
+          </p>
+          <textarea
+            id="footer-about"
+            value={aboutContent}
+            onChange={(e) => setAboutContent(e.target.value)}
+            placeholder="AssamRoots is an Assamese-first platform connecting the diaspora with authentic products..."
+            rows={5}
+            className="w-full rounded-md border border-input bg-background text-sm px-3 py-2 resize-none"
+            data-ocid="admin.footer.about_textarea"
+          />
+        </div>
+        <Button
+          size="sm"
+          className="btn-primary border-0 w-full h-10 gap-1.5 font-semibold"
+          onClick={handleSaveBranding}
+          disabled={savingBranding}
+          data-ocid="admin.footer.save_branding_button"
+        >
+          <Save size={14} />
+          {savingBranding ? "Saving…" : "Save Footer Branding"}
+        </Button>
+      </div>
+
+      {/* ── Social Links sub-section ── */}
+      <div
+        className="bg-card border border-border rounded-xl p-4 space-y-4"
+        data-ocid="admin.footer.socials_section"
+      >
+        <div>
+          <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <MessageSquare size={15} /> Social Links
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Social media links shown in the footer. Toggle to show or hide each
+            one.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {SOCIAL_PLATFORMS.map((p) => (
+            <div key={p.key} className="flex items-center gap-3">
+              <input
+                id={`social-enabled-${p.key}`}
+                type="checkbox"
+                checked={socialMap[p.key]?.enabled ?? false}
+                onChange={(e) =>
+                  setSocialMap((prev) => ({
+                    ...prev,
+                    [p.key]: { ...prev[p.key], enabled: e.target.checked },
+                  }))
+                }
+                className="w-4 h-4 rounded border-input flex-none"
+                data-ocid={`admin.footer.social_enabled.${p.key}`}
+              />
+              <Label
+                htmlFor={`social-enabled-${p.key}`}
+                className="text-xs font-semibold w-20 flex-none cursor-pointer"
+              >
+                {p.label}
+              </Label>
+              <Input
+                value={socialMap[p.key]?.url ?? ""}
+                onChange={(e) =>
+                  setSocialMap((prev) => ({
+                    ...prev,
+                    [p.key]: { ...prev[p.key], url: e.target.value },
+                  }))
+                }
+                placeholder={p.placeholder}
+                className="h-8 text-xs flex-1"
+                data-ocid={`admin.footer.social_url.${p.key}`}
+              />
+            </div>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          className="btn-primary border-0 w-full h-10 gap-1.5 font-semibold"
+          onClick={handleSaveSocials}
+          disabled={savingSocials}
+          data-ocid="admin.footer.save_socials_button"
+        >
+          <Save size={14} />
+          {savingSocials ? "Saving…" : "Save Social Links"}
+        </Button>
+      </div>
+
+      {/* ── Customer Reviews sub-section ── */}
+      <div
+        className="bg-card border border-border rounded-xl p-4 space-y-4"
+        data-ocid="admin.footer.reviews_section"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Star size={15} /> Customer Reviews
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Reviews shown in the Reviews page and footer testimonials section.
+            </p>
+          </div>
+        </div>
+
+        {/* Existing reviews list */}
+        {!reviews || reviews.length === 0 ? (
+          <div
+            className="text-center py-8 bg-muted/20 rounded-xl border border-border"
+            data-ocid="admin.footer.reviews_empty_state"
+          >
+            <Star size={28} className="text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              No reviews yet. Add the first one below.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {reviews.map((review, idx) => (
+              <div
+                key={review.id.toString()}
+                className="bg-muted/30 border border-border rounded-xl p-3"
+                data-ocid={`admin.footer.review.item.${idx + 1}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {review.reviewerName}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="flex">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            size={11}
+                            className={
+                              s <= Number(review.rating)
+                                ? "fill-accent text-accent"
+                                : "fill-muted text-muted-foreground"
+                            }
+                          />
+                        ))}
+                      </span>
+                      {review.productName && (
+                        <span className="text-[10px] text-muted-foreground truncate">
+                          {review.productName}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                      {review.reviewText}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 flex-none">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 w-7 p-0"
+                      onClick={() =>
+                        setEditReview({
+                          open: true,
+                          id: review.id,
+                          form: {
+                            reviewerName: review.reviewerName,
+                            rating: review.rating.toString(),
+                            reviewText: review.reviewText,
+                            productName: review.productName,
+                          },
+                        })
+                      }
+                      data-ocid={`admin.footer.review.edit_button.${idx + 1}`}
+                    >
+                      <Edit size={11} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`h-7 w-7 p-0 border-destructive/30 text-destructive hover:bg-destructive/10 ${
+                        confirmDeleteId === review.id ? "bg-destructive/10" : ""
+                      }`}
+                      onClick={() => handleDeleteReview(review.id)}
+                      disabled={deletingId === review.id}
+                      title={
+                        confirmDeleteId === review.id
+                          ? "Tap again to confirm"
+                          : "Delete"
+                      }
+                      data-ocid={`admin.footer.review.delete_button.${idx + 1}`}
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Review form */}
+        <div className="border-t border-border pt-4 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Add New Review
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="review-name" className="text-xs font-semibold">
+                Reviewer Name *
+              </Label>
+              <Input
+                id="review-name"
+                value={reviewForm.reviewerName}
+                onChange={(e) =>
+                  setReviewForm((p) => ({ ...p, reviewerName: e.target.value }))
+                }
+                placeholder="Priya Sarma"
+                className="h-9 text-sm"
+                data-ocid="admin.footer.review.name_input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="review-rating" className="text-xs font-semibold">
+                Rating (1–5)
+              </Label>
+              <Input
+                id="review-rating"
+                type="number"
+                min={1}
+                max={5}
+                value={reviewForm.rating}
+                onChange={(e) =>
+                  setReviewForm((p) => ({ ...p, rating: e.target.value }))
+                }
+                className="h-9 text-sm"
+                data-ocid="admin.footer.review.rating_input"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="review-product" className="text-xs font-semibold">
+              Product Name
+            </Label>
+            <Input
+              id="review-product"
+              value={reviewForm.productName}
+              onChange={(e) =>
+                setReviewForm((p) => ({ ...p, productName: e.target.value }))
+              }
+              placeholder="Assam CTC Tea"
+              className="h-9 text-sm"
+              data-ocid="admin.footer.review.product_input"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="review-text" className="text-xs font-semibold">
+              Review Text *
+            </Label>
+            <textarea
+              id="review-text"
+              value={reviewForm.reviewText}
+              onChange={(e) =>
+                setReviewForm((p) => ({ ...p, reviewText: e.target.value }))
+              }
+              placeholder="Amazing product, tastes exactly like back home..."
+              rows={3}
+              className="w-full rounded-md border border-input bg-background text-sm px-3 py-2 resize-none"
+              data-ocid="admin.footer.review.text_textarea"
+            />
+          </div>
+          <Button
+            size="sm"
+            className="btn-primary border-0 w-full h-10 gap-1.5 font-semibold"
+            onClick={handleAddReview}
+            disabled={
+              addingReview ||
+              !reviewForm.reviewerName.trim() ||
+              !reviewForm.reviewText.trim()
+            }
+            data-ocid="admin.footer.review.add_button"
+          >
+            <Plus size={14} />
+            {addingReview ? "Adding…" : "Add Review"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Edit Review Dialog */}
+      <Dialog
+        open={editReview.open}
+        onOpenChange={(open) => setEditReview((p) => ({ ...p, open }))}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Review</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Reviewer Name *</Label>
+                <Input
+                  value={editReview.form.reviewerName}
+                  onChange={(e) =>
+                    setEditReview((p) => ({
+                      ...p,
+                      form: { ...p.form, reviewerName: e.target.value },
+                    }))
+                  }
+                  className="h-9 text-sm"
+                  data-ocid="admin.footer.review.edit_name_input"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Rating (1–5)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={editReview.form.rating}
+                  onChange={(e) =>
+                    setEditReview((p) => ({
+                      ...p,
+                      form: { ...p.form, rating: e.target.value },
+                    }))
+                  }
+                  className="h-9 text-sm"
+                  data-ocid="admin.footer.review.edit_rating_input"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Product Name</Label>
+              <Input
+                value={editReview.form.productName}
+                onChange={(e) =>
+                  setEditReview((p) => ({
+                    ...p,
+                    form: { ...p.form, productName: e.target.value },
+                  }))
+                }
+                placeholder="Assam CTC Tea"
+                className="h-9 text-sm"
+                data-ocid="admin.footer.review.edit_product_input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Review Text *</Label>
+              <textarea
+                value={editReview.form.reviewText}
+                onChange={(e) =>
+                  setEditReview((p) => ({
+                    ...p,
+                    form: { ...p.form, reviewText: e.target.value },
+                  }))
+                }
+                rows={3}
+                className="w-full rounded-md border border-input bg-background text-sm px-3 py-2 resize-none"
+                data-ocid="admin.footer.review.edit_text_textarea"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setEditReview({ open: false, id: null, form: BLANK_REVIEW })
+              }
+              data-ocid="admin.footer.review.edit_cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="btn-primary border-0"
+              disabled={
+                !editReview.form.reviewerName.trim() ||
+                !editReview.form.reviewText.trim()
+              }
+              onClick={handleEditReview}
+              data-ocid="admin.footer.review.edit_save_button"
+            >
+              Update Review
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

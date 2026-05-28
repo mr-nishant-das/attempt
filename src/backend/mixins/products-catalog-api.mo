@@ -64,6 +64,16 @@ mixin (
     ProductLib.listProducts(products, filter);
   };
 
+  public query func listBestSellers(limit : Nat) : async [ProductLib.Product] {
+    let n = if (limit == 0) 6 else limit;
+    ProductLib.listBestSellers(products, n);
+  };
+
+  public query func listNewArrivals(limit : Nat) : async [ProductLib.Product] {
+    let n = if (limit == 0) 6 else limit;
+    ProductLib.listNewArrivals(products, n);
+  };
+
   // ---- Admin Product API ----
 
   public shared ({ caller }) func adminAddProduct(input : ProductLib.ProductInput) : async ProductLib.Product {

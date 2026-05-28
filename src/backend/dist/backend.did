@@ -58,6 +58,12 @@ type SubCategory =
    imageUrl: text;
    name: text;
  };
+type SocialLink = 
+ record {
+   enabled: bool;
+   platform: text;
+   url: text;
+ };
 type ShipmentUpdate = 
  record {
    message: text;
@@ -190,6 +196,11 @@ type OrderItem =
    title: text;
  };
 type OrderId = nat;
+type HowItWorksStep = 
+ record {
+   description: text;
+   title: text;
+ };
 type HeroBannerInput = 
  record {
    ctaSlug: text;
@@ -250,6 +261,16 @@ type DeliveryAddress =
    pincode: text;
    state: text;
    street: text;
+ };
+type CustomerReviewId = nat;
+type CustomerReview = 
+ record {
+   createdAt: int;
+   id: CustomerReviewId;
+   productName: text;
+   rating: nat;
+   reviewText: text;
+   reviewerName: text;
  };
 type CreateServiceRequestInput = 
  record {
@@ -328,6 +349,8 @@ service : {
   adminAddFeaturedBlock: (input: FeaturedBlockInput) -> (FeaturedBlock);
   adminAddHeroBanner: (input: HeroBannerInput) -> (HeroBanner);
   adminAddProduct: (input: ProductInput) -> (Product);
+  adminAddReview: (reviewerName: text, rating: nat, reviewText: text,
+   productName: text) -> (nat);
   adminAddSubCategory: (categoryId: CategoryId, name: text, imageUrl:
    text) -> (variant {
                err: text;
@@ -348,6 +371,7 @@ service : {
       ok: bool;
     });
   adminDeleteProduct: (id: ProductId) -> (bool);
+  adminDeleteReview: (id: nat) -> (bool);
   adminDeleteServiceRequest: (id: nat) -> (bool);
   adminDeleteSubCategory: (categoryId: CategoryId, subCategoryId:
    SubCategoryId) -> (variant {
@@ -379,6 +403,10 @@ service : {
                              err: text;
                              ok: FeaturedBlock;
                            });
+  adminUpdateFooterSettings: (tagline: text, copyright: text, aboutContent:
+   text, socialLinks: vec SocialLink) -> (bool);
+  adminUpdateHeroAndHowitworks: (heroTagline: text, heroSubtitle: text,
+   howitworksSteps: vec HowItWorksStep) -> ();
   adminUpdateHeroBanner: (id: HeroBannerId, input: HeroBannerInput) ->
    (variant {
       err: text;
@@ -386,7 +414,10 @@ service : {
     });
   adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
    text) -> (opt OrderPublic);
+  adminUpdatePolicyContent: (policyContent: text) -> (bool);
   adminUpdateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
+  adminUpdateReview: (id: nat, reviewerName: text, rating: nat, reviewText:
+   text, productName: text) -> (bool);
   adminUpdateServiceRequestStatus: (id: nat, status: ServiceRequestStatus) ->
    (opt ServiceRequestPublic);
   adminUpdateServicesAvailability: (available: bool, message: text) -> ();
@@ -418,12 +449,21 @@ service : {
   getCategory: (id: CategoryId) -> (opt Category) query;
   getCategoryBySlug: (slug: text) -> (opt Category) query;
   getFeaturedBlock: (id: FeaturedBlockId) -> (opt FeaturedBlock) query;
+  getFooterSettings: () ->
+   (record {
+      aboutContent: text;
+      copyright: text;
+      policyContent: text;
+      socialLinks: vec SocialLink;
+      tagline: text;
+    }) query;
   getHeroBanner: (id: HeroBannerId) -> (opt HeroBanner) query;
   getMyCart: () -> (CartPublic);
   getMyOrders: () -> (vec OrderPublic) query;
   getMyProfile: () -> (UserProfilePublic);
   getOrder: (orderId: OrderId) -> (opt OrderPublic) query;
   getProduct: (id: ProductId) -> (opt Product) query;
+  getReviews: () -> (vec CustomerReview) query;
   getServicesAvailability: () ->
    (record {
       available: bool;
@@ -432,6 +472,9 @@ service : {
   getSiteSettings: () ->
    (record {
       faviconUrl: opt text;
+      heroSubtitle: text;
+      heroTagline: text;
+      howitworksSteps: vec HowItWorksStep;
       logoUrl: opt text;
     }) query;
   getVideoByte: () -> (record {
@@ -441,9 +484,11 @@ service : {
                        }) query;
   isAdminSession: (token: text) -> (bool) query;
   isCurrentUserAdmin: () -> (bool) query;
+  listBestSellers: (limit: nat) -> (vec Product) query;
   listCategories: () -> (vec Category) query;
   listFeaturedBlocks: () -> (vec FeaturedBlock) query;
   listHeroBanners: () -> (vec HeroBanner) query;
+  listNewArrivals: (limit: nat) -> (vec Product) query;
   listProducts: (filter: ProductFilter) -> (ProductListResult) query;
   listProductsByCategory: (categoryId: CategoryId, limit: nat, offset:
    nat) -> (ProductListResult) query;

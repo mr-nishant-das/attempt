@@ -165,4 +165,32 @@
   .category-tile {
     @apply flex flex-col items-center justify-center gap-2 p-4 bg-muted rounded-lg transition-smooth hover:bg-muted/80;
   }
+
+  .footer-container {
+    @apply bg-muted/40 border-t border-border pt-12 pb-6 transition-smooth;
+  }
+
+  .footer-section {
+    @apply flex flex-col gap-3;
+  }
+
+  .footer-header {
+    @apply text-secondary font-display font-semibold text-sm uppercase tracking-widest;
+  }
+
+  .footer-link {
+    @apply text-muted-foreground text-sm hover:text-primary transition-smooth hover:translate-x-0.5 cursor-pointer;
+  }
+
+  .footer-tagline {
+    @apply text-xs text-muted-foreground italic;
+  }
+
+  .footer-copyright {
+    @apply text-xs text-muted-foreground text-center;
+  }
+
+  .social-icon {
+    @apply w-6 h-6 text-muted-foreground hover:text-primary transition-smooth hover:scale-110 cursor-pointer;
+  }
 }

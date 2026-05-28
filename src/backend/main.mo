@@ -17,7 +17,12 @@ import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
 import ImageStorageMixin "mixins/image-storage-api";
 import RazorpayMixin "mixins/razorpay-api";
 import AdminMixin "mixins/admin-session-api";
+import FooterLib "lib/footer";
+import FooterMixin "mixins/footer-api";
+import FooterTypes "types/footer";
 import Migration "migration";
+
+
 
 (with migration = Migration.run)
 actor {
@@ -30,6 +35,9 @@ actor {
   let serviceRequests = List.empty<ServicesLib.ServiceRequest>();
   let heroBanners = List.empty<HomepageLib.HeroBanner>();
   let featuredBlocks = List.empty<HomepageLib.FeaturedBlock>();
+  // --- Footer state ---
+  let reviews = List.empty<FooterTypes.CustomerReview>();
+  let footerState = { var footerSettings : FooterTypes.FooterSettings = FooterLib.defaultFooterSettings(); var nextReviewId : Nat = 0 };
 
   // --- Site settings: declared directly at actor level for migration compatibility ---
   var siteSettings : SiteSettingsLib.SiteSettings = SiteSettingsLib.empty();
@@ -56,11 +64,24 @@ actor {
   include ImageStorageMixin(users);
   include RazorpayMixin();
   include AdminMixin(users);
+  include FooterMixin(users, reviews, footerState);
 
   // --- Site settings public API (inline because siteSettings must be a direct actor field) ---
 
-  public query func getSiteSettings() : async { logoUrl : ?Text; faviconUrl : ?Text } {
-    { logoUrl = siteSettings.logoUrl; faviconUrl = siteSettings.faviconUrl };
+  public query func getSiteSettings() : async {
+    logoUrl : ?Text;
+    faviconUrl : ?Text;
+    heroTagline : Text;
+    heroSubtitle : Text;
+    howitworksSteps : [SiteSettingsLib.HowItWorksStep];
+  } {
+    {
+      logoUrl = siteSettings.logoUrl;
+      faviconUrl = siteSettings.faviconUrl;
+      heroTagline = SiteSettingsLib.getHeroTagline(siteSettings);
+      heroSubtitle = SiteSettingsLib.getHeroSubtitle(siteSettings);
+      howitworksSteps = SiteSettingsLib.getHowitworksSteps(siteSettings);
+    };
   };
 
   public shared ({ caller }) func adminUpdateSiteSettings(
@@ -70,6 +91,15 @@ actor {
     if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
     siteSettings := SiteSettingsLib.update(siteSettings, logoUrl, faviconUrl);
     { logoUrl = siteSettings.logoUrl; faviconUrl = siteSettings.faviconUrl };
+  };
+
+  public shared ({ caller }) func adminUpdateHeroAndHowitworks(
+    heroTagline : Text,
+    heroSubtitle : Text,
+    howitworksSteps : [SiteSettingsLib.HowItWorksStep],
+  ) : async () {
+    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    siteSettings := SiteSettingsLib.updateHeroAndHowitworks(siteSettings, heroTagline, heroSubtitle, howitworksSteps);
   };
 
   public query func getServicesAvailability() : async { available : Bool; message : Text } {

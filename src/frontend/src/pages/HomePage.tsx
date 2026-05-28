@@ -6,20 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/hooks/useCart";
 import {
-  type FeaturedBlock,
-  type HeroBanner,
+  useBestSellers,
   useCategories,
   useFeaturedBlocks,
   useHeroBanners,
-  useProducts,
+  useNewArrivals,
+  useSiteSettings,
   useVideoByte,
 } from "@/hooks/useQueries";
+import type { FeaturedBlock, HeroBanner } from "@/hooks/useQueries";
 import { Link } from "@tanstack/react-router";
 import {
   ChevronRight,
   Flame,
   Play,
+  Search,
   ShieldCheck,
+  ShoppingCart,
   Truck,
   X,
   Zap,
@@ -166,9 +169,78 @@ function CategoryTilesSkeleton() {
   );
 }
 
+// ─── How It Works Section ────────────────────────────────────────────────────
+
+const DEFAULT_HOW_IT_WORKS = [
+  {
+    icon: Search,
+    title: "Browse & Discover",
+    description:
+      "Explore 110+ authentic Assamese products — from Muga silk to premium tea.",
+  },
+  {
+    icon: ShoppingCart,
+    title: "Add to Cart",
+    description:
+      "Pick your favourites, choose quantity and options, and checkout securely.",
+  },
+  {
+    icon: Truck,
+    title: "Delivered to You",
+    description:
+      "Fast pan-India delivery brings Assam to your doorstep, wherever you are.",
+  },
+];
+
+function HowItWorksSection({
+  steps,
+}: { steps?: { title: string; description: string }[] | null }) {
+  const items = steps && steps.length === 3 ? steps : DEFAULT_HOW_IT_WORKS;
+  const icons = [Search, ShoppingCart, Truck];
+  return (
+    <section
+      aria-label="How it works"
+      className="px-4"
+      data-ocid="how-it-works.section"
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="font-display text-base font-bold text-foreground">
+          How It Works
+        </h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {items.map((step, i) => {
+          const Icon = icons[i] ?? Search;
+          return (
+            <div
+              key={step.title}
+              className="flex flex-col items-center text-center bg-card border border-border rounded-2xl px-2 py-4 gap-2 shadow-sm"
+              data-ocid={`how-it-works.step.${i + 1}`}
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-1">
+                <Icon size={18} className="text-primary" />
+              </div>
+              <p className="text-[11px] font-bold text-foreground leading-snug">
+                {step.title}
+              </p>
+              <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-3">
+                {step.description}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ─── Hero Banner Carousel ────────────────────────────────────────────────────
 
-function HeroBannerCarousel() {
+function HeroBannerCarousel({
+  tagline,
+  subtitle,
+}: { tagline?: string | null; subtitle?: string | null }) {
   const { data: fetchedBanners, isLoading } = useHeroBanners();
   const banners =
     fetchedBanners && fetchedBanners.length > 0
@@ -216,6 +288,19 @@ function HeroBannerCarousel() {
       className="relative mx-4 rounded-2xl overflow-hidden shadow-md"
       data-ocid="hero-banner-carousel"
     >
+      {/* App tagline strip above carousel */}
+      {tagline && (
+        <div className="relative z-20 bg-primary/95 px-4 py-1.5 text-center">
+          <p className="text-[11px] font-bold text-primary-foreground tracking-wide">
+            {tagline}
+          </p>
+          {subtitle && (
+            <p className="text-[9px] text-primary-foreground/80 mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      )}
       <div className="relative aspect-[16/7] w-full">
         {banners.map((b, i) => (
           <div
@@ -733,22 +818,14 @@ export default function HomePage() {
   const { addItem, isInCart, getQuantity } = useCart();
 
   const { data: categories, isLoading: catsLoading } = useCategories();
-  const { data: allProducts, isLoading: prodsLoading } = useProducts({
-    limit: 50,
-  });
+  const { data: siteSettings } = useSiteSettings();
+  const { data: bestSellers, isLoading: bestSellersLoading } =
+    useBestSellers(8);
+  const { data: newArrivals, isLoading: newArrivalsLoading } =
+    useNewArrivals(6);
 
   // First 8 categories for the tile grid
   const homeCategories = (categories ?? []).slice(0, 8);
-
-  // Best sellers: products with highest rating (top 8)
-  const bestSellers = [...(allProducts ?? [])]
-    .sort((a, b) => Number(b.rating) - Number(a.rating))
-    .slice(0, 8);
-
-  // New arrivals: most recently created (top 6)
-  const newArrivals = [...(allProducts ?? [])]
-    .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
-    .slice(0, 6);
 
   const handleAddToCart = useCallback(
     (product: Product) => {
@@ -767,8 +844,14 @@ export default function HomePage() {
         <DealsStrip />
 
         <section aria-label="Featured promotions">
-          <HeroBannerCarousel />
+          <HeroBannerCarousel
+            tagline={siteSettings?.heroTagline}
+            subtitle={siteSettings?.heroSubtitle}
+          />
         </section>
+
+        {/* How It Works */}
+        <HowItWorksSection steps={siteSettings?.howitworksSteps} />
 
         {/* Category tiles */}
         <section aria-label="Browse categories">
@@ -795,8 +878,8 @@ export default function HomePage() {
         >
           <SectionHeader title="🔥 Bestsellers" to="/products" />
           <HorizontalProductRow
-            products={bestSellers}
-            isLoading={prodsLoading}
+            products={bestSellers ?? []}
+            isLoading={bestSellersLoading}
             onAddToCart={handleAddToCart}
             isInCart={isInCart}
             getQuantity={getQuantity}
@@ -806,8 +889,8 @@ export default function HomePage() {
         <section aria-label="New arrivals" className="pt-1">
           <SectionHeader title="✨ New Arrivals" to="/products" />
           <HorizontalProductRow
-            products={newArrivals}
-            isLoading={prodsLoading}
+            products={newArrivals ?? []}
+            isLoading={newArrivalsLoading}
             onAddToCart={handleAddToCart}
             isInCart={isInCart}
             getQuantity={getQuantity}

@@ -2,9 +2,9 @@
 // All backend data access goes through these hooks.
 // Pages import from here instead of calling actor directly.
 
-import { createActor } from "@/backend";
+import { type CustomerReview, createActor } from "@/backend";
 import type { Category, Product } from "@/backend";
-import type { SiteSettings } from "@/types";
+import type { HowItWorksStep, SiteSettings } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -302,6 +302,44 @@ export function useServicesAvailability() {
   });
 }
 
+// ─── Best Sellers ────────────────────────────────────────────────────────────
+
+export function useBestSellers(limit = 6) {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<Product[]>({
+    queryKey: ["bestSellers", limit],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.listBestSellers(BigInt(limit));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60_000,
+  });
+}
+
+// ─── New Arrivals ─────────────────────────────────────────────────────────────
+
+export function useNewArrivals(limit = 6) {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<Product[]>({
+    queryKey: ["newArrivals", limit],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.listNewArrivals(BigInt(limit));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60_000,
+  });
+}
+
 // ─── Site Settings ────────────────────────────────────────────────────────────
 
 export function useSiteSettings() {
@@ -315,6 +353,9 @@ export function useSiteSettings() {
       return {
         logoUrl: result.logoUrl ?? null,
         faviconUrl: result.faviconUrl ?? null,
+        heroTagline: result.heroTagline ?? null,
+        heroSubtitle: result.heroSubtitle ?? null,
+        howitworksSteps: (result.howitworksSteps as HowItWorksStep[]) ?? null,
       };
     },
     enabled: !!actor && !isFetching,
@@ -336,10 +377,72 @@ export function useSaveSiteSettings() {
       return {
         logoUrl: result.logoUrl ?? null,
         faviconUrl: result.faviconUrl ?? null,
+        heroTagline: null,
+        heroSubtitle: null,
+        howitworksSteps: null,
       };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
+    },
+  });
+}
+
+// ─── Footer Settings ──────────────────────────────────────────────────────────
+
+export function useFooterSettings() {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<{
+    tagline: string;
+    copyright: string;
+    aboutContent: string;
+    socialLinks: Array<{ platform: string; url: string; enabled: boolean }>;
+    policyContent: string;
+  }>({
+    queryKey: ["footerSettings"],
+    queryFn: async () => {
+      if (!actor)
+        return {
+          tagline: "",
+          copyright: "",
+          aboutContent: "",
+          socialLinks: [],
+          policyContent: "",
+        };
+      return actor.getFooterSettings();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60_000,
+  });
+}
+
+// ─── Customer Reviews ─────────────────────────────────────────────────────────
+
+export function useReviews() {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<CustomerReview[]>({
+    queryKey: ["reviews"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getReviews();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60_000,
+  });
+}
+
+// ─── Policy Content ───────────────────────────────────────────────────────────
+
+export function useUpdatePolicyContent() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.adminUpdatePolicyContent(content);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["footerSettings"] });
     },
   });
 }

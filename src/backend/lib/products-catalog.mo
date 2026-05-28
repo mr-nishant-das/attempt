@@ -137,6 +137,30 @@ module {
   public func getProduct(products : List.List<Product>, id : ProductId) : ?Product {
     products.find<Product>(func(p) = p.id == id and p.isActive);
   };
+  public func listBestSellers(products : List.List<Product>, limit : Nat) : [Product] {
+    let active = products.filter(func(p : Product) : Bool { p.isActive });
+    let arr = active.toArray();
+    // Sort descending by rating (Nat 0-50)
+    let sorted = arr.sort(func(a, b) {
+      if (a.rating > b.rating) { #less }
+      else if (a.rating < b.rating) { #greater }
+      else { #equal }
+    });
+    sorted.sliceToArray(0, limit.toInt());
+  };
+
+  public func listNewArrivals(products : List.List<Product>, limit : Nat) : [Product] {
+    let active = products.filter(func(p : Product) : Bool { p.isActive });
+    let arr = active.toArray();
+    // Sort descending by createdAt (Int, nanoseconds)
+    let sorted = arr.sort(func(a, b) {
+      if (a.createdAt > b.createdAt) { #less }
+      else if (a.createdAt < b.createdAt) { #greater }
+      else { #equal }
+    });
+    sorted.sliceToArray(0, limit.toInt());
+  };
+
 
   public func listProducts(products : List.List<Product>, filter : ProductFilter) : ProductListResult {
     let filtered = products.filter(func(p : Product) : Bool {

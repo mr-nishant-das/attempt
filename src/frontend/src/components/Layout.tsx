@@ -1,15 +1,19 @@
 import { BottomNav } from "@/components/BottomNav";
 import { SearchBar } from "@/components/SearchBar";
 import { useCart } from "@/hooks/useCart";
-import { useSiteSettings } from "@/hooks/useQueries";
+import { useFooterSettings, useSiteSettings } from "@/hooks/useQueries";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Facebook,
   Grid3X3,
   Home,
+  Instagram,
+  MessageCircle,
   Search,
   ShoppingCart,
   UserCircle,
   Wrench,
+  Youtube,
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -62,6 +66,136 @@ const SIDEBAR_ITEMS = [
     ocid: "sidebar-nav-profile",
   },
 ];
+
+// ─── Footer Component ──────────────────────────────────────────────────────────────────────────
+const SOCIAL_ICONS: Record<string, React.ReactNode> = {
+  instagram: <Instagram size={18} />,
+  facebook: <Facebook size={18} />,
+  whatsapp: <MessageCircle size={18} />,
+  youtube: <Youtube size={18} />,
+};
+
+function AppFooter() {
+  const { data: footerSettings } = useFooterSettings();
+  const tagline = footerSettings?.tagline || "Bringing Assam to the World";
+  const copyright =
+    footerSettings?.copyright ||
+    `© ${new Date().getFullYear()} AssamRoots. All rights reserved.`;
+  const socialLinks = footerSettings?.socialLinks ?? [];
+
+  return (
+    <footer
+      className="bg-muted/40 border-t border-border"
+      data-ocid="site-footer"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Column 1: Branding */}
+          <div className="footer-section space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-xl font-bold text-primary">
+                AssamRoots
+              </span>
+            </div>
+            <p className="footer-tagline text-sm text-muted-foreground leading-relaxed">
+              {tagline}
+            </p>
+            <p className="footer-copyright text-xs text-muted-foreground/70">
+              {copyright}
+            </p>
+          </div>
+
+          {/* Column 2: About */}
+          <div className="footer-section space-y-3">
+            <h4 className="footer-header text-sm font-semibold text-foreground">
+              About AssamRoots
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Learn the story behind our platform and our mission to connect
+              Assam to the world.
+            </p>
+            <Link
+              to="/about"
+              className="footer-link inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              data-ocid="footer.about_link"
+            >
+              Read our story →
+            </Link>
+            <Link
+              to="/refund-policy"
+              className="footer-link inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              data-ocid="footer.refund_policy_link"
+            >
+              Refund Policy →
+            </Link>
+          </div>
+
+          {/* Column 3: Reviews */}
+          <div className="footer-section space-y-3">
+            <h4 className="footer-header text-sm font-semibold text-foreground">
+              Customer Reviews
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Read what customers say about authentic Assamese products and
+              services.
+            </p>
+            <Link
+              to="/reviews"
+              className="footer-link inline-flex items-center text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              data-ocid="footer.reviews_link"
+            >
+              See all reviews →
+            </Link>
+          </div>
+
+          {/* Column 4: Social */}
+          <div className="footer-section space-y-3">
+            <h4 className="footer-header text-sm font-semibold text-foreground">
+              Follow Us
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Stay connected with AssamRoots.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {socialLinks
+                .filter((s) => s.enabled && s.url)
+                .map((s) => (
+                  <a
+                    key={s.platform}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="social-icon w-9 h-9 flex items-center justify-center rounded-full bg-muted hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors"
+                    aria-label={s.platform}
+                    data-ocid={`footer.social.${s.platform}`}
+                  >
+                    {SOCIAL_ICONS[s.platform.toLowerCase()] ?? (
+                      <span className="text-xs">
+                        {s.platform[0].toUpperCase()}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              {socialLinks.filter((s) => s.enabled && s.url).length === 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="social-icon w-9 h-9 flex items-center justify-center rounded-full bg-muted text-muted-foreground/40">
+                    <Instagram size={18} />
+                  </span>
+                  <span className="social-icon w-9 h-9 flex items-center justify-center rounded-full bg-muted text-muted-foreground/40">
+                    <Facebook size={18} />
+                  </span>
+                  <span className="social-icon w-9 h-9 flex items-center justify-center rounded-full bg-muted text-muted-foreground/40">
+                    <Youtube size={18} />
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
 
 export function Layout({ children, hideSearch }: LayoutProps) {
   const { totalItems } = useCart();
@@ -238,24 +372,7 @@ export function Layout({ children, hideSearch }: LayoutProps) {
       </div>
 
       {/* ── Footer ── */}
-      <footer className="bg-muted/40 border-t border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-[11px] text-muted-foreground">
-              © {new Date().getFullYear()} AssamRoots. Authentic Assamese
-              products &amp; services.
-            </p>
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "assamroots")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Built with love using caffeine.ai
-            </a>
-          </div>
-        </div>
-      </footer>
+      <AppFooter />
 
       {/* ── Bottom navigation — mobile only ── */}
       <BottomNav cartCount={totalItems} />

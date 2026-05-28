@@ -228,6 +228,15 @@ export const ServiceRequestPublic = IDL.Record({
   'recipientAddress' : IDL.Opt(IDL.Text),
   'recipientName' : IDL.Opt(IDL.Text),
 });
+export const SocialLink = IDL.Record({
+  'url' : IDL.Text,
+  'platform' : IDL.Text,
+  'enabled' : IDL.Bool,
+});
+export const HowItWorksStep = IDL.Record({
+  'title' : IDL.Text,
+  'description' : IDL.Text,
+});
 export const CreateOrderInput = IDL.Record({
   'deliveryAddress' : DeliveryAddress,
   'paymentMethod' : IDL.Text,
@@ -236,6 +245,15 @@ export const CreateOrderInput = IDL.Record({
   'items' : IDL.Vec(
     IDL.Record({ 'productId' : IDL.Nat, 'quantity' : IDL.Nat })
   ),
+});
+export const CustomerReviewId = IDL.Nat;
+export const CustomerReview = IDL.Record({
+  'id' : CustomerReviewId,
+  'createdAt' : IDL.Int,
+  'reviewText' : IDL.Text,
+  'reviewerName' : IDL.Text,
+  'productName' : IDL.Text,
+  'rating' : IDL.Nat,
 });
 export const ProductFilter = IDL.Record({
   'categoryId' : IDL.Opt(CategoryId),
@@ -323,6 +341,11 @@ export const idlService = IDL.Service({
   'adminAddFeaturedBlock' : IDL.Func([FeaturedBlockInput], [FeaturedBlock], []),
   'adminAddHeroBanner' : IDL.Func([HeroBannerInput], [HeroBanner], []),
   'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
+  'adminAddReview' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
   'adminAddSubCategory' : IDL.Func(
       [CategoryId, IDL.Text, IDL.Text],
       [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
@@ -344,6 +367,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
+  'adminDeleteReview' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'adminDeleteSubCategory' : IDL.Func(
       [CategoryId, SubCategoryId],
@@ -383,6 +407,16 @@ export const idlService = IDL.Service({
       [IDL.Variant({ 'ok' : FeaturedBlock, 'err' : IDL.Text })],
       [],
     ),
+  'adminUpdateFooterSettings' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Vec(SocialLink)],
+      [IDL.Bool],
+      [],
+    ),
+  'adminUpdateHeroAndHowitworks' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Vec(HowItWorksStep)],
+      [],
+      [],
+    ),
   'adminUpdateHeroBanner' : IDL.Func(
       [HeroBannerId, HeroBannerInput],
       [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
@@ -393,9 +427,15 @@ export const idlService = IDL.Service({
       [IDL.Opt(OrderPublic)],
       [],
     ),
+  'adminUpdatePolicyContent' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'adminUpdateProduct' : IDL.Func(
       [ProductId, ProductInput],
       [IDL.Opt(Product)],
+      [],
+    ),
+  'adminUpdateReview' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+      [IDL.Bool],
       [],
     ),
   'adminUpdateServiceRequestStatus' : IDL.Func(
@@ -445,12 +485,26 @@ export const idlService = IDL.Service({
       [IDL.Opt(FeaturedBlock)],
       ['query'],
     ),
+  'getFooterSettings' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'tagline' : IDL.Text,
+          'socialLinks' : IDL.Vec(SocialLink),
+          'policyContent' : IDL.Text,
+          'aboutContent' : IDL.Text,
+          'copyright' : IDL.Text,
+        }),
+      ],
+      ['query'],
+    ),
   'getHeroBanner' : IDL.Func([HeroBannerId], [IDL.Opt(HeroBanner)], ['query']),
   'getMyCart' : IDL.Func([], [CartPublic], []),
   'getMyOrders' : IDL.Func([], [IDL.Vec(OrderPublic)], ['query']),
   'getMyProfile' : IDL.Func([], [UserProfilePublic], []),
   'getOrder' : IDL.Func([OrderId], [IDL.Opt(OrderPublic)], ['query']),
   'getProduct' : IDL.Func([ProductId], [IDL.Opt(Product)], ['query']),
+  'getReviews' : IDL.Func([], [IDL.Vec(CustomerReview)], ['query']),
   'getServicesAvailability' : IDL.Func(
       [],
       [IDL.Record({ 'available' : IDL.Bool, 'message' : IDL.Text })],
@@ -460,8 +514,11 @@ export const idlService = IDL.Service({
       [],
       [
         IDL.Record({
+          'heroSubtitle' : IDL.Text,
+          'howitworksSteps' : IDL.Vec(HowItWorksStep),
           'logoUrl' : IDL.Opt(IDL.Text),
           'faviconUrl' : IDL.Opt(IDL.Text),
+          'heroTagline' : IDL.Text,
         }),
       ],
       ['query'],
@@ -479,9 +536,11 @@ export const idlService = IDL.Service({
     ),
   'isAdminSession' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'isCurrentUserAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listBestSellers' : IDL.Func([IDL.Nat], [IDL.Vec(Product)], ['query']),
   'listCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'listFeaturedBlocks' : IDL.Func([], [IDL.Vec(FeaturedBlock)], ['query']),
   'listHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
+  'listNewArrivals' : IDL.Func([IDL.Nat], [IDL.Vec(Product)], ['query']),
   'listProducts' : IDL.Func([ProductFilter], [ProductListResult], ['query']),
   'listProductsByCategory' : IDL.Func(
       [CategoryId, IDL.Nat, IDL.Nat],
@@ -736,6 +795,15 @@ export const idlFactory = ({ IDL }) => {
     'recipientAddress' : IDL.Opt(IDL.Text),
     'recipientName' : IDL.Opt(IDL.Text),
   });
+  const SocialLink = IDL.Record({
+    'url' : IDL.Text,
+    'platform' : IDL.Text,
+    'enabled' : IDL.Bool,
+  });
+  const HowItWorksStep = IDL.Record({
+    'title' : IDL.Text,
+    'description' : IDL.Text,
+  });
   const CreateOrderInput = IDL.Record({
     'deliveryAddress' : DeliveryAddress,
     'paymentMethod' : IDL.Text,
@@ -744,6 +812,15 @@ export const idlFactory = ({ IDL }) => {
     'items' : IDL.Vec(
       IDL.Record({ 'productId' : IDL.Nat, 'quantity' : IDL.Nat })
     ),
+  });
+  const CustomerReviewId = IDL.Nat;
+  const CustomerReview = IDL.Record({
+    'id' : CustomerReviewId,
+    'createdAt' : IDL.Int,
+    'reviewText' : IDL.Text,
+    'reviewerName' : IDL.Text,
+    'productName' : IDL.Text,
+    'rating' : IDL.Nat,
   });
   const ProductFilter = IDL.Record({
     'categoryId' : IDL.Opt(CategoryId),
@@ -832,6 +909,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'adminAddHeroBanner' : IDL.Func([HeroBannerInput], [HeroBanner], []),
     'adminAddProduct' : IDL.Func([ProductInput], [Product], []),
+    'adminAddReview' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
     'adminAddSubCategory' : IDL.Func(
         [CategoryId, IDL.Text, IDL.Text],
         [IDL.Variant({ 'ok' : Category, 'err' : IDL.Text })],
@@ -853,6 +935,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
+    'adminDeleteReview' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'adminDeleteServiceRequest' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'adminDeleteSubCategory' : IDL.Func(
         [CategoryId, SubCategoryId],
@@ -896,6 +979,16 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Variant({ 'ok' : FeaturedBlock, 'err' : IDL.Text })],
         [],
       ),
+    'adminUpdateFooterSettings' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Vec(SocialLink)],
+        [IDL.Bool],
+        [],
+      ),
+    'adminUpdateHeroAndHowitworks' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Vec(HowItWorksStep)],
+        [],
+        [],
+      ),
     'adminUpdateHeroBanner' : IDL.Func(
         [HeroBannerId, HeroBannerInput],
         [IDL.Variant({ 'ok' : HeroBanner, 'err' : IDL.Text })],
@@ -906,9 +999,15 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(OrderPublic)],
         [],
       ),
+    'adminUpdatePolicyContent' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'adminUpdateProduct' : IDL.Func(
         [ProductId, ProductInput],
         [IDL.Opt(Product)],
+        [],
+      ),
+    'adminUpdateReview' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Bool],
         [],
       ),
     'adminUpdateServiceRequestStatus' : IDL.Func(
@@ -958,6 +1057,19 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(FeaturedBlock)],
         ['query'],
       ),
+    'getFooterSettings' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'tagline' : IDL.Text,
+            'socialLinks' : IDL.Vec(SocialLink),
+            'policyContent' : IDL.Text,
+            'aboutContent' : IDL.Text,
+            'copyright' : IDL.Text,
+          }),
+        ],
+        ['query'],
+      ),
     'getHeroBanner' : IDL.Func(
         [HeroBannerId],
         [IDL.Opt(HeroBanner)],
@@ -968,6 +1080,7 @@ export const idlFactory = ({ IDL }) => {
     'getMyProfile' : IDL.Func([], [UserProfilePublic], []),
     'getOrder' : IDL.Func([OrderId], [IDL.Opt(OrderPublic)], ['query']),
     'getProduct' : IDL.Func([ProductId], [IDL.Opt(Product)], ['query']),
+    'getReviews' : IDL.Func([], [IDL.Vec(CustomerReview)], ['query']),
     'getServicesAvailability' : IDL.Func(
         [],
         [IDL.Record({ 'available' : IDL.Bool, 'message' : IDL.Text })],
@@ -977,8 +1090,11 @@ export const idlFactory = ({ IDL }) => {
         [],
         [
           IDL.Record({
+            'heroSubtitle' : IDL.Text,
+            'howitworksSteps' : IDL.Vec(HowItWorksStep),
             'logoUrl' : IDL.Opt(IDL.Text),
             'faviconUrl' : IDL.Opt(IDL.Text),
+            'heroTagline' : IDL.Text,
           }),
         ],
         ['query'],
@@ -996,9 +1112,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isAdminSession' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'isCurrentUserAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listBestSellers' : IDL.Func([IDL.Nat], [IDL.Vec(Product)], ['query']),
     'listCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
     'listFeaturedBlocks' : IDL.Func([], [IDL.Vec(FeaturedBlock)], ['query']),
     'listHeroBanners' : IDL.Func([], [IDL.Vec(HeroBanner)], ['query']),
+    'listNewArrivals' : IDL.Func([IDL.Nat], [IDL.Vec(Product)], ['query']),
     'listProducts' : IDL.Func([ProductFilter], [ProductListResult], ['query']),
     'listProductsByCategory' : IDL.Func(
         [CategoryId, IDL.Nat, IDL.Nat],

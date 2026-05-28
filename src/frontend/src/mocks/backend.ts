@@ -389,7 +389,13 @@ export const mockBackend: backendInterface = {
     ok: true,
   }),
 
-  getSiteSettings: async () => ({ logoUrl: undefined, faviconUrl: undefined }),
+  getSiteSettings: async () => ({
+    logoUrl: undefined,
+    faviconUrl: undefined,
+    heroTagline: "",
+    heroSubtitle: "",
+    howitworksSteps: [],
+  }),
 
   adminUpdateSiteSettings: async (logoUrl, faviconUrl) => ({
     logoUrl: logoUrl ?? undefined,
@@ -405,4 +411,48 @@ export const mockBackend: backendInterface = {
 
   getServicesAvailability: async () => ({ available: true, message: "" }),
   adminUpdateServicesAvailability: async (_available, _message) => undefined,
+
+  getFooterSettings: async () => ({
+    tagline: "Bringing Assam to the World",
+    copyright: `© ${new Date().getFullYear()} AssamRoots. All rights reserved.`,
+    aboutContent: "",
+    socialLinks: [],
+    policyContent: "",
+  }),
+  adminUpdateFooterSettings: async (
+    _t: string,
+    _c: string,
+    _a: string,
+    _s: Array<{ platform: string; url: string; enabled: boolean }>,
+  ) => true,
+
+  getReviews: async () => [],
+  adminAddReview: async (
+    _n: string,
+    _r: bigint,
+    _t: string,
+    _p: string,
+  ): Promise<bigint> => BigInt(1),
+  adminUpdateReview: async (
+    _id: bigint,
+    _n: string,
+    _r: bigint,
+    _t: string,
+    _p: string,
+  ): Promise<boolean> => true,
+  adminDeleteReview: async (_id: bigint): Promise<boolean> => true,
+
+  adminUpdateHeroAndHowitworks: async (
+    _heroTagline: string,
+    _heroSubtitle: string,
+    _howitworksSteps: Array<{ title: string; description: string }>,
+  ): Promise<void> => undefined,
+
+  adminUpdatePolicyContent: async (_policyContent: string): Promise<boolean> => true,
+
+  listBestSellers: async (_limit: bigint): Promise<typeof sampleProducts> =>
+    sampleProducts.slice(0, Number(_limit)),
+
+  listNewArrivals: async (_limit: bigint): Promise<typeof sampleProducts> =>
+    sampleProducts.slice(0, Number(_limit)),
 };

@@ -58,6 +58,15 @@ export interface CreateServiceRequestInput {
   'recipientAddress' : [] | [string],
   'recipientName' : [] | [string],
 }
+export interface CustomerReview {
+  'id' : CustomerReviewId,
+  'createdAt' : bigint,
+  'reviewText' : string,
+  'reviewerName' : string,
+  'productName' : string,
+  'rating' : bigint,
+}
+export type CustomerReviewId = bigint;
 export interface DeliveryAddress {
   'street' : string,
   'city' : string,
@@ -111,6 +120,7 @@ export interface HeroBannerInput {
   'ctaText' : string,
   'subtitle' : string,
 }
+export interface HowItWorksStep { 'title' : string, 'description' : string }
 export type OrderId = bigint;
 export interface OrderItem {
   'title' : string,
@@ -226,6 +236,11 @@ export interface ShipmentUpdate {
   'message' : string,
   'timestamp' : bigint,
 }
+export interface SocialLink {
+  'url' : string,
+  'platform' : string,
+  'enabled' : boolean,
+}
 export interface SubCategory {
   'id' : SubCategoryId,
   'name' : string,
@@ -303,6 +318,7 @@ export interface _SERVICE {
   'adminAddFeaturedBlock' : ActorMethod<[FeaturedBlockInput], FeaturedBlock>,
   'adminAddHeroBanner' : ActorMethod<[HeroBannerInput], HeroBanner>,
   'adminAddProduct' : ActorMethod<[ProductInput], Product>,
+  'adminAddReview' : ActorMethod<[string, bigint, string, string], bigint>,
   'adminAddSubCategory' : ActorMethod<
     [CategoryId, string, string],
     { 'ok' : Category } |
@@ -324,6 +340,7 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'adminDeleteProduct' : ActorMethod<[ProductId], boolean>,
+  'adminDeleteReview' : ActorMethod<[bigint], boolean>,
   'adminDeleteServiceRequest' : ActorMethod<[bigint], boolean>,
   'adminDeleteSubCategory' : ActorMethod<
     [CategoryId, SubCategoryId],
@@ -355,6 +372,14 @@ export interface _SERVICE {
     { 'ok' : FeaturedBlock } |
       { 'err' : string }
   >,
+  'adminUpdateFooterSettings' : ActorMethod<
+    [string, string, string, Array<SocialLink>],
+    boolean
+  >,
+  'adminUpdateHeroAndHowitworks' : ActorMethod<
+    [string, string, Array<HowItWorksStep>],
+    undefined
+  >,
   'adminUpdateHeroBanner' : ActorMethod<
     [HeroBannerId, HeroBannerInput],
     { 'ok' : HeroBanner } |
@@ -364,7 +389,12 @@ export interface _SERVICE {
     [OrderId, OrderStatus, string],
     [] | [OrderPublic]
   >,
+  'adminUpdatePolicyContent' : ActorMethod<[string], boolean>,
   'adminUpdateProduct' : ActorMethod<[ProductId, ProductInput], [] | [Product]>,
+  'adminUpdateReview' : ActorMethod<
+    [bigint, string, bigint, string, string],
+    boolean
+  >,
   'adminUpdateServiceRequestStatus' : ActorMethod<
     [bigint, ServiceRequestStatus],
     [] | [ServiceRequestPublic]
@@ -392,19 +422,36 @@ export interface _SERVICE {
   'getCategory' : ActorMethod<[CategoryId], [] | [Category]>,
   'getCategoryBySlug' : ActorMethod<[string], [] | [Category]>,
   'getFeaturedBlock' : ActorMethod<[FeaturedBlockId], [] | [FeaturedBlock]>,
+  'getFooterSettings' : ActorMethod<
+    [],
+    {
+      'tagline' : string,
+      'socialLinks' : Array<SocialLink>,
+      'policyContent' : string,
+      'aboutContent' : string,
+      'copyright' : string,
+    }
+  >,
   'getHeroBanner' : ActorMethod<[HeroBannerId], [] | [HeroBanner]>,
   'getMyCart' : ActorMethod<[], CartPublic>,
   'getMyOrders' : ActorMethod<[], Array<OrderPublic>>,
   'getMyProfile' : ActorMethod<[], UserProfilePublic>,
   'getOrder' : ActorMethod<[OrderId], [] | [OrderPublic]>,
   'getProduct' : ActorMethod<[ProductId], [] | [Product]>,
+  'getReviews' : ActorMethod<[], Array<CustomerReview>>,
   'getServicesAvailability' : ActorMethod<
     [],
     { 'available' : boolean, 'message' : string }
   >,
   'getSiteSettings' : ActorMethod<
     [],
-    { 'logoUrl' : [] | [string], 'faviconUrl' : [] | [string] }
+    {
+      'heroSubtitle' : string,
+      'howitworksSteps' : Array<HowItWorksStep>,
+      'logoUrl' : [] | [string],
+      'faviconUrl' : [] | [string],
+      'heroTagline' : string,
+    }
   >,
   'getVideoByte' : ActorMethod<
     [],
@@ -412,9 +459,11 @@ export interface _SERVICE {
   >,
   'isAdminSession' : ActorMethod<[string], boolean>,
   'isCurrentUserAdmin' : ActorMethod<[], boolean>,
+  'listBestSellers' : ActorMethod<[bigint], Array<Product>>,
   'listCategories' : ActorMethod<[], Array<Category>>,
   'listFeaturedBlocks' : ActorMethod<[], Array<FeaturedBlock>>,
   'listHeroBanners' : ActorMethod<[], Array<HeroBanner>>,
+  'listNewArrivals' : ActorMethod<[bigint], Array<Product>>,
   'listProducts' : ActorMethod<[ProductFilter], ProductListResult>,
   'listProductsByCategory' : ActorMethod<
     [CategoryId, bigint, bigint],

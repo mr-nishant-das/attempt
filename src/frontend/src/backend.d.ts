@@ -30,6 +30,16 @@ export interface SubCategory {
     name: string;
     imageUrl: string;
 }
+export interface CartItem {
+    productId: bigint;
+    addedAt: bigint;
+    quantity: bigint;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
 export interface Address {
     city: string;
     name: string;
@@ -40,12 +50,12 @@ export interface Address {
     phone: string;
     pincode: string;
 }
-export interface TransformationOutput {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
-}
 export type SubCategoryId = bigint;
+export interface SocialLink {
+    url: string;
+    platform: string;
+    enabled: boolean;
+}
 export interface OrderItem {
     title: string;
     discountPercent: bigint;
@@ -53,6 +63,10 @@ export interface OrderItem {
     imageUrl: string;
     quantity: bigint;
     price: bigint;
+}
+export interface HowItWorksStep {
+    title: string;
+    description: string;
 }
 export interface OrderPublic {
     id: OrderId;
@@ -68,6 +82,14 @@ export interface OrderPublic {
     updatedAt: bigint;
     totalAmount: bigint;
     items: Array<OrderItem>;
+}
+export interface CustomerReview {
+    id: CustomerReviewId;
+    createdAt: bigint;
+    reviewText: string;
+    reviewerName: string;
+    productName: string;
+    rating: bigint;
 }
 export interface CreateServiceRequestInput {
     userName: string;
@@ -225,11 +247,7 @@ export interface HeroBanner {
     ctaText: string;
     subtitle: string;
 }
-export interface CartItem {
-    productId: bigint;
-    addedAt: bigint;
-    quantity: bigint;
-}
+export type CustomerReviewId = bigint;
 export interface UserProfileInput {
     name: string;
     email: string;
@@ -287,6 +305,7 @@ export interface backendInterface {
     adminAddFeaturedBlock(input: FeaturedBlockInput): Promise<FeaturedBlock>;
     adminAddHeroBanner(input: HeroBannerInput): Promise<HeroBanner>;
     adminAddProduct(input: ProductInput): Promise<Product>;
+    adminAddReview(reviewerName: string, rating: bigint, reviewText: string, productName: string): Promise<bigint>;
     adminAddSubCategory(categoryId: CategoryId, name: string, imageUrl: string): Promise<{
         __kind__: "ok";
         ok: Category;
@@ -316,6 +335,7 @@ export interface backendInterface {
         err: string;
     }>;
     adminDeleteProduct(id: ProductId): Promise<boolean>;
+    adminDeleteReview(id: bigint): Promise<boolean>;
     adminDeleteServiceRequest(id: bigint): Promise<boolean>;
     adminDeleteSubCategory(categoryId: CategoryId, subCategoryId: SubCategoryId): Promise<{
         __kind__: "ok";
@@ -355,6 +375,8 @@ export interface backendInterface {
         __kind__: "err";
         err: string;
     }>;
+    adminUpdateFooterSettings(tagline: string, copyright: string, aboutContent: string, socialLinks: Array<SocialLink>): Promise<boolean>;
+    adminUpdateHeroAndHowitworks(heroTagline: string, heroSubtitle: string, howitworksSteps: Array<HowItWorksStep>): Promise<void>;
     adminUpdateHeroBanner(id: HeroBannerId, input: HeroBannerInput): Promise<{
         __kind__: "ok";
         ok: HeroBanner;
@@ -363,7 +385,9 @@ export interface backendInterface {
         err: string;
     }>;
     adminUpdateOrderStatus(orderId: OrderId, newStatus: OrderStatus, message: string): Promise<OrderPublic | null>;
+    adminUpdatePolicyContent(policyContent: string): Promise<boolean>;
     adminUpdateProduct(id: ProductId, input: ProductInput): Promise<Product | null>;
+    adminUpdateReview(id: bigint, reviewerName: string, rating: bigint, reviewText: string, productName: string): Promise<boolean>;
     adminUpdateServiceRequestStatus(id: bigint, status: ServiceRequestStatus): Promise<ServiceRequestPublic | null>;
     adminUpdateServicesAvailability(available: boolean, message: string): Promise<void>;
     adminUpdateSiteSettings(logoUrl: string | null, faviconUrl: string | null): Promise<{
@@ -396,19 +420,30 @@ export interface backendInterface {
     getCategory(id: CategoryId): Promise<Category | null>;
     getCategoryBySlug(slug: string): Promise<Category | null>;
     getFeaturedBlock(id: FeaturedBlockId): Promise<FeaturedBlock | null>;
+    getFooterSettings(): Promise<{
+        tagline: string;
+        socialLinks: Array<SocialLink>;
+        policyContent: string;
+        aboutContent: string;
+        copyright: string;
+    }>;
     getHeroBanner(id: HeroBannerId): Promise<HeroBanner | null>;
     getMyCart(): Promise<CartPublic>;
     getMyOrders(): Promise<Array<OrderPublic>>;
     getMyProfile(): Promise<UserProfilePublic>;
     getOrder(orderId: OrderId): Promise<OrderPublic | null>;
     getProduct(id: ProductId): Promise<Product | null>;
+    getReviews(): Promise<Array<CustomerReview>>;
     getServicesAvailability(): Promise<{
         available: boolean;
         message: string;
     }>;
     getSiteSettings(): Promise<{
+        heroSubtitle: string;
+        howitworksSteps: Array<HowItWorksStep>;
         logoUrl?: string;
         faviconUrl?: string;
+        heroTagline: string;
     }>;
     getVideoByte(): Promise<{
         url: string;
@@ -417,9 +452,11 @@ export interface backendInterface {
     }>;
     isAdminSession(token: string): Promise<boolean>;
     isCurrentUserAdmin(): Promise<boolean>;
+    listBestSellers(limit: bigint): Promise<Array<Product>>;
     listCategories(): Promise<Array<Category>>;
     listFeaturedBlocks(): Promise<Array<FeaturedBlock>>;
     listHeroBanners(): Promise<Array<HeroBanner>>;
+    listNewArrivals(limit: bigint): Promise<Array<Product>>;
     listProducts(filter: ProductFilter): Promise<ProductListResult>;
     listProductsByCategory(categoryId: CategoryId, limit: bigint, offset: bigint): Promise<ProductListResult>;
     razorpayTransform(input: TransformationInput): Promise<TransformationOutput>;

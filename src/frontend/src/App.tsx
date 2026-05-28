@@ -27,6 +27,9 @@ const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
+const RefundPolicyPage = lazy(() => import("./pages/RefundPolicyPage"));
 
 // ─── Page loader ───────────────────────────────────────────────────────────
 function PageLoader() {
@@ -167,6 +170,24 @@ const profileRoute = createRoute({
   component: ProfilePage,
 });
 
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/about",
+  component: AboutPage,
+});
+
+const reviewsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reviews",
+  component: ReviewsPage,
+});
+
+const refundPolicyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/refund-policy",
+  component: RefundPolicyPage,
+});
+
 // ─── Router ────────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -187,6 +208,9 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   servicesRoute,
   profileRoute,
+  aboutRoute,
+  reviewsRoute,
+  refundPolicyRoute,
 ]);
 
 const router = createRouter({ routeTree });

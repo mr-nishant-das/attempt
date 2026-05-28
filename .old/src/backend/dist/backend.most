@@ -29,6 +29,16 @@ type Category__215221089 =
     subCategories : [SubCategory__162297167]
   };
 type Category__738961406 = Category__215221089;
+type CustomerReviewId__277475127 = Nat;
+type CustomerReview__231716436 =
+  {
+    createdAt : Int;
+    id : CustomerReviewId__277475127;
+    productName : Text;
+    rating : Nat;
+    reviewText : Text;
+    reviewerName : Text
+  };
 type DeliveryAddress__677077764 =
   {
     city : Text;
@@ -56,6 +66,14 @@ type FeaturedBlock__996892836 =
     thumbnailUrl : Text;
     title : Text
   };
+type FooterSettings__753066405 =
+  {
+    aboutContent : Text;
+    copyright : Text;
+    policyContent : ?Text;
+    socialLinks : [SocialLink__995248996];
+    tagline : Text
+  };
 type HeroBannerId__70244176 = Nat;
 type HeroBanner__1008058493 = HeroBanner__462156611;
 type HeroBanner__462156611 =
@@ -69,9 +87,29 @@ type HeroBanner__462156611 =
     subtitle : Text;
     title : Text
   };
+type HowItWorksStep__698088507 = {description : Text; title : Text};
 type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
-type OldSiteSettings__357140151 = {faviconUrl : ?Text; logoUrl : ?Text};
+type OldFooterSettings__843040849 =
+  {
+    aboutContent : Text;
+    copyright : Text;
+    socialLinks : [OldSocialLink__623397246];
+    tagline : Text
+  };
+type OldFooterState__386686822 =
+  {var footerSettings : OldFooterSettings__843040849; var nextReviewId : Nat};
+type OldSiteSettings__357140151 =
+  {
+    faviconUrl : ?Text;
+    logoUrl : ?Text;
+    servicesAvailable : ?Bool;
+    servicesUnavailableMessage : ?Text;
+    videoByteEnabled : ?Bool;
+    videoByteTitle : ?Text;
+    videoByteUrl : ?Text
+  };
+type OldSocialLink__623397246 = {enabled : Bool; platform : Text; url : Text};
 type OrderId__521176343 = Nat;
 type OrderItem__241319351 =
   {
@@ -168,6 +206,7 @@ type ServiceType__390865354 =
   };
 type ShipmentUpdate__973262024 =
   {message : Text; status : OrderStatus__272730104; timestamp : Int};
+type SocialLink__995248996 = {enabled : Bool; platform : Text; url : Text};
 type SubCategoryId__545153969 = Nat;
 type SubCategory__162297167 =
   {id : SubCategoryId__545153969; imageUrl : Text; name : Text};
@@ -212,6 +251,7 @@ actor ({
       var blocks : [var [var ?FeaturedBlock__551827969]];
       var elementIndex : Nat__490723111
     };
+  in footerState : OldFooterState__386686822;
   stable heroBanners :
     {
       var blockIndex : Nat__490723111;
@@ -221,7 +261,7 @@ actor ({
   stable var nextCategoryId : Nat;
   stable var nextFeaturedBlockId : Nat;
   stable var nextHeroBannerId : Nat;
-  in var nextOrderId : Nat;
+  stable var nextOrderId : Nat;
   stable var nextProductId : Nat;
   stable var nextServiceRequestId : Nat;
   stable var nextSubCategoryId : Nat;
@@ -235,6 +275,12 @@ actor ({
     {
       var blockIndex : Nat__490723111;
       var blocks : [var [var ?Product__1036577220]];
+      var elementIndex : Nat__490723111
+    };
+  stable reviews :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?CustomerReview__231716436]];
       var elementIndex : Nat__490723111
     };
   stable serviceRequests :
@@ -278,6 +324,8 @@ actor ({
       var blocks : [var [var ?FeaturedBlock__551827969]];
       var elementIndex : Nat__490723111
     };
+  stable footerState :
+    {var footerSettings : FooterSettings__753066405; var nextReviewId : Nat};
   stable heroBanners :
     {
       var blockIndex : Nat__490723111;
@@ -303,6 +351,12 @@ actor ({
       var blocks : [var [var ?Product__1036577220]];
       var elementIndex : Nat__490723111
     };
+  stable reviews :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?CustomerReview__231716436]];
+      var elementIndex : Nat__490723111
+    };
   stable serviceRequests :
     {
       var blockIndex : Nat__490723111;
@@ -312,6 +366,9 @@ actor ({
   stable var siteSettings :
     {
       faviconUrl : ?Text;
+      heroSubtitle : ?Text;
+      heroTagline : ?Text;
+      howitworksSteps : ?[HowItWorksStep__698088507];
       logoUrl : ?Text;
       servicesAvailable : ?Bool;
       servicesUnavailableMessage : ?Text;

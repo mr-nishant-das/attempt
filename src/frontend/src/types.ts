@@ -108,9 +108,17 @@ export interface User {
 
 // ─── Site Settings ────────────────────────────────────────────────────────────
 
+export interface HowItWorksStep {
+  title: string;
+  description: string;
+}
+
 export interface SiteSettings {
   logoUrl: string | null;
   faviconUrl: string | null;
+  heroTagline?: string | null;
+  heroSubtitle?: string | null;
+  howitworksSteps?: HowItWorksStep[] | null;
 }
 
 export const SITE_SETTINGS_KEY = "assamroots_site_settings";

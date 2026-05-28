@@ -1,4 +1,3 @@
-import Debug "mo:core/Debug";
 import Types "../types/image-storage";
 
 /// Domain helpers for image storage.
@@ -10,11 +9,11 @@ module {
 
   /// Validate that a hash string is a non-empty SHA-256 hex string (64 chars).
   public func isValidHash(hash : ImageHash) : Bool {
-    Debug.todo()
+    hash.size() == 64;
   };
 
   /// Build a public URL for a stored image given its hash and the gateway base URL.
   public func buildImageUrl(gatewayBaseUrl : Text, hash : ImageHash) : Text {
-    Debug.todo()
+    gatewayBaseUrl # "/" # hash;
   };
 };

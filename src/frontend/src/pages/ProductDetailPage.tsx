@@ -850,6 +850,13 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
+          <Link
+            to="/refund-policy"
+            className="text-xs text-primary font-medium underline hover:text-primary/80 transition-colors"
+            data-ocid="product-detail.refund_policy_link"
+          >
+            View Return &amp; Refund Policy
+          </Link>
         </div>
 
         {/* ── About This Product ── */}

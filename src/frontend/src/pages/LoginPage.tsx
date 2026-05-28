@@ -230,15 +230,7 @@ export default function LoginPage() {
           <AssameseBorder />
 
           <p className="text-center text-xs text-muted-foreground pb-2">
-            © {new Date().getFullYear()}{" "}
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:opacity-70 transition-smooth"
-            >
-              Built with caffeine.ai
-            </a>
+            © {new Date().getFullYear()} AssamRoots. All rights reserved.
           </p>
         </div>
       </main>
