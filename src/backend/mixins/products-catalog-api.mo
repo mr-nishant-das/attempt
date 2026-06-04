@@ -1,14 +1,22 @@
 import Types "../types/products-catalog";
 import ProductLib "../lib/products-catalog";
-import UserLib "../lib/users";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
+import Time "mo:core/Time";
 
 mixin (
   products : List.List<ProductLib.Product>,
   categories : List.List<ProductLib.Category>,
-  users : List.List<UserLib.UserProfile>,
+  adminSessionState : { var token : ?Text; var expiry : Int },
 ) {
+
+  func _adminAuthPC(token : Text) : Bool {
+    switch (adminSessionState.token) {
+      case (?t) Text.equal(t, token) and Time.now() < adminSessionState.expiry;
+      case null false;
+    };
+  };
 
   stable var nextProductId : Nat = 1;
   stable var nextCategoryId : Nat = 1;
@@ -76,107 +84,113 @@ mixin (
 
   // ---- Admin Product API ----
 
-  public shared ({ caller }) func adminAddProduct(input : ProductLib.ProductInput) : async ProductLib.Product {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminAddProduct(adminToken : Text, input : ProductLib.ProductInput) : async ProductLib.Product {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     let product = ProductLib.addProduct(products, nextProductId, input);
     nextProductId += 1;
     product;
   };
 
-  public shared ({ caller }) func adminUpdateProduct(id : ProductLib.ProductId, input : ProductLib.ProductInput) : async ?ProductLib.Product {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminUpdateProduct(adminToken : Text, id : ProductLib.ProductId, input : ProductLib.ProductInput) : async ?ProductLib.Product {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     ProductLib.updateProduct(products, id, input);
   };
 
-  public shared ({ caller }) func adminSetDiscount(id : ProductLib.ProductId, discountPercent : Nat) : async ?ProductLib.Product {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminSetDiscount(adminToken : Text, id : ProductLib.ProductId, discountPercent : Nat) : async ?ProductLib.Product {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     if (discountPercent > 100) Runtime.trap("Discount must be 0-100");
     ProductLib.setDiscount(products, id, discountPercent);
   };
 
-  public shared ({ caller }) func adminDeleteProduct(id : ProductLib.ProductId) : async Bool {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminDeleteProduct(adminToken : Text, id : ProductLib.ProductId) : async Bool {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     ProductLib.softDeleteProduct(products, id);
   };
 
-  public shared ({ caller }) func adminUpdateStock(id : ProductLib.ProductId, newStock : Nat) : async ?ProductLib.Product {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminUpdateStock(adminToken : Text, id : ProductLib.ProductId, newStock : Nat) : async ?ProductLib.Product {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     ProductLib.updateStock(products, id, newStock);
   };
 
   // ---- Admin Category API ----
 
-  public shared query ({ caller }) func adminGetCategories() : async [ProductLib.Category] {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public query func adminGetCategories(adminToken : Text) : async [ProductLib.Category] {
+    if (not _adminAuthPC(adminToken)) Runtime.trap("Unauthorized");
     ProductLib.listCategories(categories);
   };
 
-  public shared ({ caller }) func adminAddCategory(
+  public shared func adminAddCategory(
+    adminToken : Text,
     name : Text,
     slug : Text,
     description : Text,
     imageUrl : Text,
   ) : async { #ok : ProductLib.Category; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     let cat = ProductLib.addCategory(categories, nextCategoryId, name, slug, description, imageUrl);
     nextCategoryId += 1;
     #ok(cat);
   };
 
-  public shared ({ caller }) func adminUpdateCategory(
+  public shared func adminUpdateCategory(
+    adminToken : Text,
     id : ProductLib.CategoryId,
     name : Text,
     slug : Text,
     description : Text,
     imageUrl : Text,
   ) : async { #ok : ProductLib.Category; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     switch (ProductLib.updateCategory(categories, id, name, slug, description, imageUrl)) {
       case (?cat) { #ok(cat) };
       case null { #err("Category not found") };
     };
   };
 
-  public shared ({ caller }) func adminDeleteCategory(
+  public shared func adminDeleteCategory(
+    adminToken : Text,
     id : ProductLib.CategoryId,
   ) : async { #ok : Bool; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     let deleted = ProductLib.deleteCategory(categories, id);
     if (deleted) { #ok(true) } else { #err("Category not found") };
   };
 
   // ---- Admin SubCategory API ----
 
-  public shared ({ caller }) func adminAddSubCategory(
+  public shared func adminAddSubCategory(
+    adminToken : Text,
     categoryId : ProductLib.CategoryId,
     name : Text,
     imageUrl : Text,
   ) : async { #ok : ProductLib.Category; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     switch (ProductLib.addSubCategory(categories, categoryId, nextSubCategoryId, name, imageUrl)) {
       case (?cat) { nextSubCategoryId += 1; #ok(cat) };
       case null { #err("Category not found") };
     };
   };
 
-  public shared ({ caller }) func adminUpdateSubCategory(
+  public shared func adminUpdateSubCategory(
+    adminToken : Text,
     categoryId : ProductLib.CategoryId,
     subCategoryId : ProductLib.SubCategoryId,
     name : Text,
     imageUrl : Text,
   ) : async { #ok : ProductLib.Category; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     switch (ProductLib.updateSubCategory(categories, categoryId, subCategoryId, name, imageUrl)) {
       case (?cat) { #ok(cat) };
       case null { #err("Category or subcategory not found") };
     };
   };
 
-  public shared ({ caller }) func adminDeleteSubCategory(
+  public shared func adminDeleteSubCategory(
+    adminToken : Text,
     categoryId : ProductLib.CategoryId,
     subCategoryId : ProductLib.SubCategoryId,
   ) : async { #ok : ProductLib.Category; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthPC(adminToken)) return #err("Not authorized");
     switch (ProductLib.deleteSubCategory(categories, categoryId, subCategoryId)) {
       case (?cat) { #ok(cat) };
       case null { #err("Category or subcategory not found") };

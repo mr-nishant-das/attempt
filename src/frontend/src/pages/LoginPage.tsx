@@ -1,7 +1,8 @@
-import { useAuth } from "@/hooks/useAuth";
+import { createActor } from "@/backend";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { useNavigate } from "@tanstack/react-router";
-import { Fingerprint, Leaf, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, Leaf, Mail, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 // ─── Decorative Assamese motif SVG ─────────────────────────────────────────
 function AssameseBorder() {
@@ -47,13 +48,13 @@ function AssameseBorder() {
 const features = [
   {
     icon: ShieldCheck,
-    title: "Secure & Decentralised",
-    desc: "No passwords stored. Your identity is yours alone.",
+    title: "Secure OTP Login",
+    desc: "One-time code sent to your email — no password needed.",
   },
   {
-    icon: Fingerprint,
-    title: "One-tap Login",
-    desc: "Authenticate with biometrics or device PIN.",
+    icon: Mail,
+    title: "Instant Verification",
+    desc: "Check your inbox and enter the 6-digit code to sign in.",
   },
   {
     icon: Leaf,
@@ -63,25 +64,89 @@ const features = [
 ];
 
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { actor, isFetching } = useActor(createActor);
   const navigate = useNavigate();
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Redirect if already authenticated
+  // Redirect if already has session
   useEffect(() => {
-    if (isAuthenticated) {
+    if (localStorage.getItem("userSessionToken")) {
       navigate({ to: "/home" });
     }
-  }, [isAuthenticated, navigate]);
+  }, [navigate]);
 
-  if (isLoading) return null;
-  if (isAuthenticated) return null;
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
-  const handleLogin = async () => {
+  const startResendTimer = () => {
+    setResendCountdown(30);
+    timerRef.current = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendCode = async () => {
+    if (!email.trim() || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!actor || isFetching) {
+      setError("Connecting to server, please try again.");
+      return;
+    }
     setLoading(true);
+    setError("");
     try {
-      await login();
-      navigate({ to: "/home" });
+      const result = await actor.requestOtp(email.trim());
+      if ("err" in result) {
+        setError(result.err);
+      } else {
+        setStep("otp");
+        startResendTimer();
+      }
+    } catch {
+      setError("Failed to send code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) {
+      setError("Please enter the 6-digit code.");
+      return;
+    }
+    if (!actor || isFetching) {
+      setError("Connecting to server, please try again.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const result = await actor.verifyOtp(email.trim(), otp.trim());
+      if ("err" in result) {
+        setError(result.err);
+      } else {
+        localStorage.setItem("userSessionToken", result.ok);
+        navigate({ to: "/home" });
+      }
+    } catch {
+      setError("Verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -122,90 +187,185 @@ export default function LoginPage() {
               Welcome to AssamRoots
             </h1>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Discover authentic Assamese products — tea, handloom, spices, and
-              more.
+              Sign in with a one-time code sent to your email.
             </p>
           </div>
 
-          {/* Decorative divider */}
           <AssameseBorder />
 
           {/* Login card */}
           <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
-            {/* Saffron accent top strip */}
             <div className="h-1.5 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
-
             <div className="p-6 space-y-5">
-              <div className="space-y-1">
-                <h2 className="font-display text-lg font-bold text-foreground">
-                  Sign in to continue
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  We use Internet Identity — no email or password required.
-                </p>
-              </div>
-
-              {/* II explanation box */}
-              <div className="rounded-xl p-3 flex gap-3 items-start border border-secondary/25 bg-secondary/8">
-                <ShieldCheck
-                  size={20}
-                  className="mt-0.5 shrink-0 text-secondary"
-                />
-                <p className="text-xs text-foreground leading-relaxed">
-                  <span className="font-semibold">Internet Identity</span> is a
-                  secure, password-free login by DFINITY. It uses your device's
-                  biometrics or PIN — your data stays private and decentralised.
-                </p>
-              </div>
-
-              {/* Login button */}
-              <button
-                type="button"
-                onClick={handleLogin}
-                disabled={loading}
-                data-ocid="login-submit"
-                className="w-full h-12 rounded-xl font-display font-bold text-sm flex items-center justify-center gap-2 transition-smooth active:scale-95 disabled:opacity-60 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                {loading ? (
-                  <>
-                    <svg
-                      className="animate-spin"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-hidden="true"
+              {step === "email" ? (
+                <>
+                  <div className="space-y-1">
+                    <h2 className="font-display text-lg font-bold text-foreground">
+                      Enter your email
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      We'll send a 6-digit verification code.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendCode()}
+                      disabled={loading}
+                      data-ocid="login.email_input"
+                      className="w-full h-11 rounded-xl border border-input bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                    />
+                    {error && (
+                      <p
+                        className="text-xs text-destructive"
+                        data-ocid="login.error_state"
+                      >
+                        {error}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSendCode}
+                      disabled={loading}
+                      data-ocid="login.submit_button"
+                      className="w-full h-12 rounded-xl font-display font-bold text-sm flex items-center justify-center gap-2 transition-smooth active:scale-95 disabled:opacity-60 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                      <path
-                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        opacity="0.25"
-                      />
-                      <path d="M21 12a9 9 0 01-9-9" strokeLinecap="round" />
-                    </svg>
-                    Opening Internet Identity…
-                  </>
-                ) : (
-                  <>
-                    <Fingerprint size={18} />
-                    Continue with Internet Identity
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-xs text-muted-foreground">
-                New here?{" "}
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  className="font-semibold underline underline-offset-2 transition-smooth hover:opacity-70 text-primary"
-                  data-ocid="login-create-account"
-                >
-                  Create your account
-                </button>{" "}
-                — same button, we'll guide you.
-              </p>
+                      {loading ? (
+                        <svg
+                          className="animate-spin h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                      ) : (
+                        <>
+                          <Mail size={16} />
+                          Send Code
+                          <ArrowRight size={14} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <h2 className="font-display text-lg font-bold text-foreground">
+                      Check your inbox
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      We sent a 6-digit code to{" "}
+                      <span className="font-semibold text-foreground">
+                        {email}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => {
+                        setOtp(e.target.value.replace(/\D/g, ""));
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
+                      disabled={loading}
+                      data-ocid="login.otp_input"
+                      className="w-full h-11 rounded-xl border border-input bg-background px-4 text-center text-2xl font-mono tracking-widest text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                    />
+                    {error && (
+                      <p
+                        className="text-xs text-destructive"
+                        data-ocid="login.error_state"
+                      >
+                        {error}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={loading}
+                      data-ocid="login.verify_button"
+                      className="w-full h-12 rounded-xl font-display font-bold text-sm flex items-center justify-center gap-2 transition-smooth active:scale-95 disabled:opacity-60 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {loading ? (
+                        <svg
+                          className="animate-spin h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                      ) : (
+                        "Verify & Sign In"
+                      )}
+                    </button>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStep("email");
+                          setOtp("");
+                          setError("");
+                        }}
+                        data-ocid="login.back_button"
+                        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground mr-4"
+                      >
+                        ← Change email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={
+                          resendCountdown === 0 ? handleSendCode : undefined
+                        }
+                        disabled={resendCountdown > 0 || loading}
+                        data-ocid="login.resend_button"
+                        className="text-xs underline underline-offset-2 disabled:opacity-50 text-primary hover:text-primary/80"
+                      >
+                        {resendCountdown > 0
+                          ? `Resend in ${resendCountdown}s`
+                          : "Resend code"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -226,9 +386,24 @@ export default function LoginPage() {
             ))}
           </div>
 
-          {/* Decorative divider bottom */}
           <AssameseBorder />
 
+          <p className="text-center text-xs text-muted-foreground pb-2">
+            New vendor?{" "}
+            <a
+              href="/vendor-register"
+              className="text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              Apply as a vendor
+            </a>
+            {" · "}
+            <a
+              href="/vendor-login"
+              className="text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              Vendor login
+            </a>
+          </p>
           <p className="text-center text-xs text-muted-foreground pb-2">
             © {new Date().getFullYear()} AssamRoots. All rights reserved.
           </p>

@@ -30,6 +30,10 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const RefundPolicyPage = lazy(() => import("./pages/RefundPolicyPage"));
+const VendorRegisterPage = lazy(() => import("./pages/VendorRegisterPage"));
+const VendorLoginPage = lazy(() => import("./pages/VendorLoginPage"));
+const VendorDashboardPage = lazy(() => import("./pages/VendorDashboardPage"));
+const VendorActionPage = lazy(() => import("./pages/VendorActionPage"));
 
 // ─── Page loader ───────────────────────────────────────────────────────────
 function PageLoader() {
@@ -188,6 +192,34 @@ const refundPolicyRoute = createRoute({
   component: RefundPolicyPage,
 });
 
+const vendorRegisterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vendor-register",
+  component: VendorRegisterPage,
+});
+
+const vendorLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vendor-login",
+  component: VendorLoginPage,
+});
+
+const vendorDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vendor-dashboard",
+  component: VendorDashboardPage,
+});
+
+const vendorActionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/vendor-action",
+  validateSearch: (search: Record<string, unknown>) => ({
+    action: typeof search.action === "string" ? search.action : "",
+    token: typeof search.token === "string" ? search.token : "",
+  }),
+  component: VendorActionPage,
+});
+
 // ─── Router ────────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -211,6 +243,10 @@ const routeTree = rootRoute.addChildren([
   aboutRoute,
   reviewsRoute,
   refundPolicyRoute,
+  vendorRegisterRoute,
+  vendorLoginRoute,
+  vendorDashboardRoute,
+  vendorActionRoute,
 ]);
 
 const router = createRouter({ routeTree });

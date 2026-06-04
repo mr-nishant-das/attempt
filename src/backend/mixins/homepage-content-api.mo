@@ -1,13 +1,21 @@
 import HomepageLib "../lib/homepage-content";
-import UserLib "../lib/users";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
+import Time "mo:core/Time";
 
 mixin (
   heroBanners : List.List<HomepageLib.HeroBanner>,
   featuredBlocks : List.List<HomepageLib.FeaturedBlock>,
-  users : List.List<UserLib.UserProfile>,
+  adminSessionState : { var token : ?Text; var expiry : Int },
 ) {
+
+  func _adminAuthHP(token : Text) : Bool {
+    switch (adminSessionState.token) {
+      case (?t) Text.equal(t, token) and Time.now() < adminSessionState.expiry;
+      case null false;
+    };
+  };
 
   stable var nextHeroBannerId : Nat = 1;
   stable var nextFeaturedBlockId : Nat = 1;
@@ -34,40 +42,42 @@ mixin (
 
   // ---- Admin HeroBanner API ----
 
-  public shared query ({ caller }) func adminListHeroBanners() : async [HomepageLib.HeroBanner] {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public query func adminListHeroBanners(adminToken : Text) : async [HomepageLib.HeroBanner] {
+    if (not _adminAuthHP(adminToken)) Runtime.trap("Unauthorized");
     HomepageLib.listAllHeroBanners(heroBanners);
   };
 
-  public shared ({ caller }) func adminAddHeroBanner(input : HomepageLib.HeroBannerInput) : async HomepageLib.HeroBanner {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminAddHeroBanner(adminToken : Text, input : HomepageLib.HeroBannerInput) : async HomepageLib.HeroBanner {
+    if (not _adminAuthHP(adminToken)) Runtime.trap("Unauthorized");
     let banner = HomepageLib.addHeroBanner(heroBanners, nextHeroBannerId, input);
     nextHeroBannerId += 1;
     banner;
   };
 
-  public shared ({ caller }) func adminUpdateHeroBanner(
+  public shared func adminUpdateHeroBanner(
+    adminToken : Text,
     id : HomepageLib.HeroBannerId,
     input : HomepageLib.HeroBannerInput,
   ) : async { #ok : HomepageLib.HeroBanner; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthHP(adminToken)) return #err("Not authorized");
     switch (HomepageLib.updateHeroBanner(heroBanners, id, input)) {
       case (?banner) { #ok(banner) };
       case null { #err("HeroBanner not found") };
     };
   };
 
-  public shared ({ caller }) func adminDeleteHeroBanner(id : HomepageLib.HeroBannerId) : async { #ok : Bool; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+  public shared func adminDeleteHeroBanner(adminToken : Text, id : HomepageLib.HeroBannerId) : async { #ok : Bool; #err : Text } {
+    if (not _adminAuthHP(adminToken)) return #err("Not authorized");
     let deleted = HomepageLib.deleteHeroBanner(heroBanners, id);
     if (deleted) { #ok(true) } else { #err("HeroBanner not found") };
   };
 
-  public shared ({ caller }) func adminReorderHeroBanner(
+  public shared func adminReorderHeroBanner(
+    adminToken : Text,
     id : HomepageLib.HeroBannerId,
     newOrder : Nat,
   ) : async { #ok : HomepageLib.HeroBanner; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthHP(adminToken)) return #err("Not authorized");
     switch (HomepageLib.reorderHeroBanner(heroBanners, id, newOrder)) {
       case (?banner) { #ok(banner) };
       case null { #err("HeroBanner not found") };
@@ -76,31 +86,32 @@ mixin (
 
   // ---- Admin FeaturedBlock API ----
 
-  public shared query ({ caller }) func adminListFeaturedBlocks() : async [HomepageLib.FeaturedBlock] {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public query func adminListFeaturedBlocks(adminToken : Text) : async [HomepageLib.FeaturedBlock] {
+    if (not _adminAuthHP(adminToken)) Runtime.trap("Unauthorized");
     HomepageLib.listAllFeaturedBlocks(featuredBlocks);
   };
 
-  public shared ({ caller }) func adminAddFeaturedBlock(input : HomepageLib.FeaturedBlockInput) : async HomepageLib.FeaturedBlock {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminAddFeaturedBlock(adminToken : Text, input : HomepageLib.FeaturedBlockInput) : async HomepageLib.FeaturedBlock {
+    if (not _adminAuthHP(adminToken)) Runtime.trap("Unauthorized");
     let block = HomepageLib.addFeaturedBlock(featuredBlocks, nextFeaturedBlockId, input);
     nextFeaturedBlockId += 1;
     block;
   };
 
-  public shared ({ caller }) func adminUpdateFeaturedBlock(
+  public shared func adminUpdateFeaturedBlock(
+    adminToken : Text,
     id : HomepageLib.FeaturedBlockId,
     input : HomepageLib.FeaturedBlockInput,
   ) : async { #ok : HomepageLib.FeaturedBlock; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+    if (not _adminAuthHP(adminToken)) return #err("Not authorized");
     switch (HomepageLib.updateFeaturedBlock(featuredBlocks, id, input)) {
       case (?block) { #ok(block) };
       case null { #err("FeaturedBlock not found") };
     };
   };
 
-  public shared ({ caller }) func adminDeleteFeaturedBlock(id : HomepageLib.FeaturedBlockId) : async { #ok : Bool; #err : Text } {
-    if (not UserLib.isAdmin(users, caller)) return #err("Not authorized");
+  public shared func adminDeleteFeaturedBlock(adminToken : Text, id : HomepageLib.FeaturedBlockId) : async { #ok : Bool; #err : Text } {
+    if (not _adminAuthHP(adminToken)) return #err("Not authorized");
     let deleted = HomepageLib.deleteFeaturedBlock(featuredBlocks, id);
     if (deleted) { #ok(true) } else { #err("FeaturedBlock not found") };
   };

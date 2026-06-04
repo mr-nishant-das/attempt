@@ -2,8 +2,12 @@
 // All backend data access goes through these hooks.
 // Pages import from here instead of calling actor directly.
 
-import { type CustomerReview, createActor } from "@/backend";
-import type { Category, Product } from "@/backend";
+import {
+  type VendorProductInput,
+  type VendorProductView,
+  createActor,
+} from "@/backend";
+import type { Category, CustomerReview, Product } from "@/backend";
 import type { HowItWorksStep, SiteSettings } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +22,7 @@ export interface HeroBanner {
   ctaSlug: string;
   order: bigint;
   isActive: boolean;
+  durationSeconds: bigint;
 }
 
 export interface HeroBannerInput {
@@ -28,6 +33,7 @@ export interface HeroBannerInput {
   ctaSlug: string;
   order: bigint;
   isActive: boolean;
+  durationSeconds: bigint;
 }
 
 // ─── Featured Block types ─────────────────────────────────────────────────────
@@ -175,8 +181,11 @@ export function useHeroBanners() {
       if (!actor) return [];
       try {
         type ActorExt = { listHeroBanners: () => Promise<HeroBanner[]> };
-        const result = await (actor as unknown as ActorExt).listHeroBanners();
-        return result;
+        const raw = await (actor as unknown as ActorExt).listHeroBanners();
+        return raw.map((b) => ({
+          ...b,
+          durationSeconds: b.durationSeconds ?? 5n,
+        }));
       } catch {
         return [];
       }
@@ -194,10 +203,11 @@ export function useAdminHeroBanners() {
       if (!actor) return [];
       try {
         type ActorExt = { adminListHeroBanners: () => Promise<HeroBanner[]> };
-        const result = await (
-          actor as unknown as ActorExt
-        ).adminListHeroBanners();
-        return result;
+        const raw = await (actor as unknown as ActorExt).adminListHeroBanners();
+        return raw.map((b) => ({
+          ...b,
+          durationSeconds: b.durationSeconds ?? 5n,
+        }));
       } catch {
         return [];
       }
@@ -371,6 +381,7 @@ export function useSaveSiteSettings() {
     mutationFn: async (settings: SiteSettings) => {
       if (!actor) throw new Error("Actor not ready");
       const result = await actor.adminUpdateSiteSettings(
+        localStorage.getItem("adminSessionToken") ?? "",
         settings.logoUrl ?? null,
         settings.faviconUrl ?? null,
       );
@@ -439,10 +450,179 @@ export function useUpdatePolicyContent() {
   return useMutation({
     mutationFn: async (content: string) => {
       if (!actor) throw new Error("Actor not ready");
-      return actor.adminUpdatePolicyContent(content);
+      return actor.adminUpdatePolicyContent(
+        localStorage.getItem("adminSessionToken") ?? "",
+        content,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["footerSettings"] });
+    },
+  });
+}
+
+// ─── Vendor Products ────────────────────────────────────────────────────────
+
+export function useVendorMyProducts(sessionToken: string) {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<VendorProductView[]>({
+    queryKey: ["vendorMyProducts", sessionToken],
+    queryFn: async () => {
+      if (!actor) return [];
+      const result = await actor.vendorGetMyProducts(sessionToken);
+      if ("err" in result) throw new Error(result.err);
+      return result.ok;
+    },
+    enabled: !!actor && !isFetching && !!sessionToken,
+    staleTime: 30_000,
+  });
+}
+
+export function useVendorSubmitProduct() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sessionToken,
+      input,
+    }: {
+      sessionToken: string;
+      input: VendorProductInput;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const result = await actor.vendorSubmitProduct(sessionToken, input);
+      if ("err" in result) throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorMyProducts"] });
+    },
+  });
+}
+
+// ─── Vendor Update Product Quantity
+
+export function useVendorUpdateProductQuantity() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sessionToken,
+      productId,
+      newQuantityKg,
+    }: {
+      sessionToken: string;
+      productId: bigint;
+      newQuantityKg: bigint;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const result = await actor.vendorUpdateProductQuantity(
+        sessionToken,
+        productId,
+        newQuantityKg,
+      );
+      if ("err" in result) throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorMyProducts"] });
+    },
+  });
+}
+
+// ─── Admin Vendor Products ───────────────────────────────────────────────────
+
+export function useAdminVendorProducts() {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<VendorProductView[]>({
+    queryKey: ["adminVendorProducts"],
+    queryFn: async () => {
+      if (!actor) return [];
+      const adminToken = localStorage.getItem("adminSessionToken") ?? "";
+      return actor.adminListVendorProducts(adminToken);
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30_000,
+  });
+}
+
+export function useAdminVendorProductsByVendor(vendorId: string) {
+  const { actor, isFetching } = useActor(createActor);
+  return useQuery<VendorProductView[]>({
+    queryKey: ["adminVendorProductsByVendor", vendorId],
+    queryFn: async () => {
+      if (!actor) return [];
+      const adminToken = localStorage.getItem("adminSessionToken") ?? "";
+      const { Principal: P } = await import("@icp-sdk/core/principal");
+      return actor.adminListVendorProductsByVendor(
+        adminToken,
+        P.fromText(vendorId),
+      );
+    },
+    enabled: !!actor && !isFetching && !!vendorId,
+    staleTime: 30_000,
+  });
+}
+
+export function useAdminApproveVendorProduct() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      taxPercent,
+    }: {
+      productId: bigint;
+      taxPercent: bigint;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const adminToken = localStorage.getItem("adminSessionToken") ?? "";
+      const result = await actor.adminApproveVendorProduct(
+        adminToken,
+        productId,
+        taxPercent,
+        null,
+      );
+      if ("err" in result) throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminVendorProducts"] });
+      queryClient.invalidateQueries({
+        queryKey: ["adminVendorProductsByVendor"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["vendorMyProducts"] });
+    },
+  });
+}
+
+export function useAdminRejectVendorProduct() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      reason,
+    }: {
+      productId: bigint;
+      reason: string;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const adminToken = localStorage.getItem("adminSessionToken") ?? "";
+      const result = await actor.adminRejectVendorProduct(
+        adminToken,
+        productId,
+        reason,
+      );
+      if ("err" in result) throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminVendorProducts"] });
+      queryClient.invalidateQueries({
+        queryKey: ["adminVendorProductsByVendor"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["vendorMyProducts"] });
     },
   });
 }

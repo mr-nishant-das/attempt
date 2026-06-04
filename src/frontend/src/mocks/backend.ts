@@ -1,5 +1,5 @@
-import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult, ServiceRequestPublic, CreateServiceRequestInput, _ImmutableObjectStorageCreateCertificateResult, _ImmutableObjectStorageRefillInformation, _ImmutableObjectStorageRefillResult, HeroBanner, FeaturedBlock } from "../backend";
-import { OrderStatus, ServiceRequestStatus } from "../backend";
+import type { backendInterface, Product, Category, CartPublic, UserProfilePublic, OrderPublic, ProductListResult, ServiceRequestPublic, CreateServiceRequestInput, _ImmutableObjectStorageCreateCertificateResult, _ImmutableObjectStorageRefillInformation, _ImmutableObjectStorageRefillResult, HeroBanner, FeaturedBlock, VendorRegistration, VendorSummary, VendorOrderSummary } from "../backend";
+import { OrderStatus, ServiceRequestStatus, VendorStatus, VendorType } from "../backend";
 import type { Principal } from "@icp-sdk/core/principal";
 
 const samplePrincipal = { toText: () => "aaaaa-aa" } as unknown as Principal;
@@ -271,19 +271,19 @@ export const mockBackend: backendInterface = {
   },
   getProduct: async (id) => sampleProducts.find(p => p.id === id) ?? null,
 
-  adminGetCategories: async () => sampleCategories,
-  adminAddCategory: async (_name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
-  adminUpdateCategory: async (_id, _name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
-  adminDeleteCategory: async (_id) => ({ __kind__: "ok" as const, ok: true }),
-  adminAddSubCategory: async (_categoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
-  adminUpdateSubCategory: async (_categoryId, _subCategoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
-  adminDeleteSubCategory: async (_categoryId, _subCategoryId) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminGetCategories: async (_adminToken: string) => sampleCategories,
+  adminAddCategory: async (_adminToken: string, _name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminUpdateCategory: async (_adminToken: string, _id, _name, _slug, _description, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminDeleteCategory: async (_adminToken: string, _id) => ({ __kind__: "ok" as const, ok: true }),
+  adminAddSubCategory: async (_adminToken: string, _categoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminUpdateSubCategory: async (_adminToken: string, _categoryId, _subCategoryId, _name, _imageUrl) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
+  adminDeleteSubCategory: async (_adminToken: string, _categoryId, _subCategoryId) => ({ __kind__: "ok" as const, ok: sampleCategories[0] }),
 
-  adminAddProduct: async (_input) => sampleProducts[0],
-  adminUpdateProduct: async (_id, _input) => sampleProducts[0],
-  adminDeleteProduct: async (_id) => true,
-  adminUpdateStock: async (_id, _stock) => sampleProducts[0],
-  adminSetDiscount: async (_id, _discount) => sampleProducts[0],
+  adminAddProduct: async (_adminToken: string, _input) => sampleProducts[0],
+  adminUpdateProduct: async (_adminToken: string, _id, _input) => sampleProducts[0],
+  adminDeleteProduct: async (_adminToken: string, _id) => true,
+  adminUpdateStock: async (_adminToken: string, _id, _stock) => sampleProducts[0],
+  adminSetDiscount: async (_adminToken: string, _id, _discount) => sampleProducts[0],
 
   getMyCart: async () => sampleCart,
   addToCart: async (_productId, _quantity) => sampleCart,
@@ -336,27 +336,27 @@ export const mockBackend: backendInterface = {
     recipientPhone: input.recipientPhone,
     recipientAddress: input.recipientAddress,
   }),
-  adminGetServiceRequests: async (): Promise<ServiceRequestPublic[]> => [],
-  adminUpdateServiceRequestStatus: async (_id, _status) => null,
-  adminDeleteServiceRequest: async (_id) => true,
+  adminGetServiceRequests: async (_adminToken: string): Promise<ServiceRequestPublic[]> => [],
+  adminUpdateServiceRequestStatus: async (_adminToken: string, _id, _status) => null,
+  adminDeleteServiceRequest: async (_adminToken: string, _id) => true,
 
-  adminRegisterImageHash: async (_hash: string): Promise<string> => _hash,
+  adminRegisterImageHash: async (_adminToken: string, _hash: string): Promise<string> => _hash,
 
   listHeroBanners: async (): Promise<HeroBanner[]> => [],
   getHeroBanner: async (_id): Promise<HeroBanner | null> => null,
   listFeaturedBlocks: async (): Promise<FeaturedBlock[]> => [],
   getFeaturedBlock: async (_id): Promise<FeaturedBlock | null> => null,
 
-  adminListHeroBanners: async (): Promise<HeroBanner[]> => [],
-  adminAddHeroBanner: async (_input) => ({ id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" }),
-  adminUpdateHeroBanner: async (_id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" } }),
-  adminDeleteHeroBanner: async (_id) => ({ __kind__: "ok" as const, ok: true }),
-  adminReorderHeroBanner: async (_id, _newOrder) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "" } }),
+  adminListHeroBanners: async (_adminToken: string): Promise<HeroBanner[]> => [],
+  adminAddHeroBanner: async (_adminToken: string, _input) => ({ id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "", durationSeconds: 5n }),
+  adminUpdateHeroBanner: async (_adminToken: string, _id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "", durationSeconds: 5n } }),
+  adminDeleteHeroBanner: async (_adminToken: string, _id) => ({ __kind__: "ok" as const, ok: true }),
+  adminReorderHeroBanner: async (_adminToken: string, _id, _newOrder) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", order: BigInt(0), isActive: true, imageUrl: "", ctaSlug: "", ctaText: "", subtitle: "", durationSeconds: 5n } }),
 
-  adminListFeaturedBlocks: async (): Promise<FeaturedBlock[]> => [],
-  adminAddFeaturedBlock: async (_input) => ({ id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] }),
-  adminUpdateFeaturedBlock: async (_id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] } }),
-  adminDeleteFeaturedBlock: async (_id) => ({ __kind__: "ok" as const, ok: true }),
+  adminListFeaturedBlocks: async (_adminToken: string): Promise<FeaturedBlock[]> => [],
+  adminAddFeaturedBlock: async (_adminToken: string, _input) => ({ id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] }),
+  adminUpdateFeaturedBlock: async (_adminToken: string, _id, _input) => ({ __kind__: "ok" as const, ok: { id: BigInt(1), title: "", content: "", thumbnailUrl: "", order: BigInt(0), createdAt: BigInt(Date.now()), isActive: true, contentImages: [] } }),
+  adminDeleteFeaturedBlock: async (_adminToken: string, _id) => ({ __kind__: "ok" as const, ok: true }),
 
   _immutableObjectStorageBlobsAreLive: async (_hashes: Array<Uint8Array>): Promise<Array<boolean>> =>
     _hashes.map(() => true),
@@ -397,7 +397,7 @@ export const mockBackend: backendInterface = {
     howitworksSteps: [],
   }),
 
-  adminUpdateSiteSettings: async (logoUrl, faviconUrl) => ({
+  adminUpdateSiteSettings: async (_adminToken: string, logoUrl, faviconUrl) => ({
     logoUrl: logoUrl ?? undefined,
     faviconUrl: faviconUrl ?? undefined,
   }),
@@ -407,10 +407,10 @@ export const mockBackend: backendInterface = {
   isAdminSession: async (_token) => false,
 
   getVideoByte: async () => ({ url: "", title: "AssamRoots", enabled: false }),
-  adminUpdateVideoByte: async (_url, _enabled, _title) => undefined,
+  adminUpdateVideoByte: async (_adminToken: string, _url, _enabled, _title) => undefined,
 
   getServicesAvailability: async () => ({ available: true, message: "" }),
-  adminUpdateServicesAvailability: async (_available, _message) => undefined,
+  adminUpdateServicesAvailability: async (_adminToken: string, _available, _message) => undefined,
 
   getFooterSettings: async () => ({
     tagline: "Bringing Assam to the World",
@@ -420,6 +420,7 @@ export const mockBackend: backendInterface = {
     policyContent: "",
   }),
   adminUpdateFooterSettings: async (
+    _adminToken: string,
     _t: string,
     _c: string,
     _a: string,
@@ -428,31 +429,83 @@ export const mockBackend: backendInterface = {
 
   getReviews: async () => [],
   adminAddReview: async (
+    _adminToken: string,
     _n: string,
     _r: bigint,
     _t: string,
     _p: string,
   ): Promise<bigint> => BigInt(1),
   adminUpdateReview: async (
+    _adminToken: string,
     _id: bigint,
     _n: string,
     _r: bigint,
     _t: string,
     _p: string,
   ): Promise<boolean> => true,
-  adminDeleteReview: async (_id: bigint): Promise<boolean> => true,
+  adminDeleteReview: async (_adminToken: string, _id: bigint): Promise<boolean> => true,
 
   adminUpdateHeroAndHowitworks: async (
+    _adminToken: string,
     _heroTagline: string,
     _heroSubtitle: string,
     _howitworksSteps: Array<{ title: string; description: string }>,
   ): Promise<void> => undefined,
 
-  adminUpdatePolicyContent: async (_policyContent: string): Promise<boolean> => true,
+  adminUpdatePolicyContent: async (_adminToken: string, _policyContent: string): Promise<boolean> => true,
 
   listBestSellers: async (_limit: bigint): Promise<typeof sampleProducts> =>
     sampleProducts.slice(0, Number(_limit)),
 
   listNewArrivals: async (_limit: bigint): Promise<typeof sampleProducts> =>
     sampleProducts.slice(0, Number(_limit)),
+
+  // ─── OTP / Auth stubs ──────────────────────────────────────────────────
+  requestOtp: async (_email: string) => ({ __kind__: "ok" as const, ok: null }),
+  verifyOtp: async (_email: string, _code: string) => ({ __kind__: "ok" as const, ok: "mock-token" }),
+
+  // ─── Admin extra auth stubs ────────────────────────────────────────────
+  adminVerifyKey: async (_secretKey: string) => ({ __kind__: "ok" as const, ok: null }),
+  adminRequestOtp: async () => ({ __kind__: "ok" as const, ok: null }),
+  adminVerifyOtp: async (_code: string) => ({ __kind__: "ok" as const, ok: "mock-admin-token" }),
+
+  // ─── Vendor stubs ──────────────────────────────────────────────────────
+  registerVendor: async (_details: VendorRegistration) => ({ __kind__: "ok" as const, ok: "mock-vendor-id" }),
+  getMyVendorProfile: async () => ({ __kind__: "ok" as const, ok: {
+    id: samplePrincipal,
+    businessName: "Demo Vendor",
+    contactEmail: "vendor@example.com",
+    phone: "9876543210",
+    categories: ["Food & Spices", "Tea"],
+    status: VendorStatus.pending,
+    registeredAt: BigInt(Date.now()),
+    assignedProductIds: [],
+    address: "",
+    bankAccountNumber: "",
+    ifscCode: "",
+    vendorType: VendorType.brand,
+  } }),
+  getMyVendorOrders: async () => [] as VendorOrderSummary[],
+  getVendorForProduct: async (_productId: string): Promise<VendorSummary | null> => null,
+
+  processVendorActionToken: async (_token: string, _action: unknown) => Promise.resolve({ __kind__: "ok" as const, ok: "done" }),
+
+  // ─── Admin vendor management stubs ────────────────────────────────────
+  adminListVendors: async (_status: VendorStatus | null) => [] as VendorSummary[],
+  adminApproveVendor: async (_adminToken: string, _vendorId: Principal) => ({ __kind__: "ok" as const, ok: null }),
+  adminRejectVendor: async (_adminToken: string, _vendorId: Principal, _reason: string) => ({ __kind__: "ok" as const, ok: null }),
+  adminSuspendVendor: async (_adminToken: string, _vendorId: Principal) => ({ __kind__: "ok" as const, ok: null }),
+  adminAssignProductToVendor: async (_adminToken: string, _vendorId: Principal, _productId: string) => ({ __kind__: "ok" as const, ok: null }),
+  adminUnassignProductFromVendor: async (_adminToken: string, _vendorId: Principal, _productId: string) => ({ __kind__: "ok" as const, ok: null }),
+
+  adminApproveVendorProduct: async (_token: string, _id: bigint, _tax: bigint) => ({ __kind__: 'ok' as const, ok: {} as any }),
+  adminListVendorProducts: async (_token: string) => [] as any[],
+  adminListVendorProductsByVendor: async (_token: string, _vendorId: any) => [] as any[],
+  adminRejectVendorProduct: async (_token: string, _id: bigint, _reason: string) => ({ __kind__: 'ok' as const, ok: {} as any }),
+  vendorSubmitProduct: async (_token: string, _input: any) => ({ __kind__: 'ok' as const, ok: {} as any }),
+  vendorGetMyProducts: async (_token: string) => ({ __kind__: 'ok' as const, ok: [] as any[] }),
+  adminUpdateVendorProductQuantity: async (_adminToken: string, _productId: bigint, _newQuantityKg: bigint) => ({ __kind__: 'ok' as const, ok: null }),
+  vendorUpdateProductQuantity: async (_sessionToken: string, _productId: bigint, _newQuantityKg: bigint) => ({ __kind__: 'ok' as const, ok: null }),
+  getVendorStatusBySession: async (_token: string) => null as import('@/backend').VendorStatus | null,
+  verifyVendorOtp: async (_email: string, _code: string) => ({ __kind__: 'err' as const, err: 'mock' }),
 };

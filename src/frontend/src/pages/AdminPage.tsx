@@ -4,7 +4,13 @@ import {
   ServiceType,
   createActor,
 } from "@/backend";
-import type { Category, SubCategory } from "@/backend";
+import type {
+  Category,
+  SubCategory,
+  VendorProductView,
+  VendorStatus,
+} from "@/backend";
+import { Variant_pending_approved_rejected } from "@/backend";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Layout } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +40,7 @@ import {
 import { discountedPrice, formatPrice } from "@/types";
 import type { Product } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
+import type { Principal } from "@dfinity/principal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -57,12 +64,15 @@ import {
   Save,
   Search,
   ShieldCheck,
+  ShoppingBag,
   ShoppingCart,
   Star,
   Trash2,
   Truck,
+  Users,
   Video,
   Warehouse,
+  XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -80,7 +90,9 @@ type AdminTab =
   | "inventory"
   | "discounts"
   | "branding"
-  | "footer";
+  | "footer"
+  | "vendors"
+  | "vendorproducts";
 
 interface ProductFormValues {
   title: string;
@@ -130,21 +142,9 @@ const BLANK_CATEGORY: CategoryFormValues = {
 const BLANK_SUBCATEGORY: SubCategoryFormValues = { name: "", imageUrl: "" };
 
 // ─── Admin auth ───────────────────────────────────────────────────────────────
-const ADMIN_USER_ID = "assamroots2804";
-// SHA-256 of "Assamroots@2026"
-const ADMIN_PASSCODE_HASH =
-  "e74f2cbf96f8f8bc8d22f4f6b95bfb9a09bf52aa77bd98ef3b6ded28db6f49bd";
 const SESSION_KEY = "adminSessionToken";
 const SESSION_TS_KEY = "adminSessionTs";
-const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
-
-async function sha256(message: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 function isSessionValid(): boolean {
   const token = localStorage.getItem(SESSION_KEY);
@@ -159,36 +159,41 @@ function clearSession() {
   localStorage.removeItem(SESSION_TS_KEY);
 }
 
-function createSession() {
-  const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+function createSession(token: string) {
   localStorage.setItem(SESSION_KEY, token);
   localStorage.setItem(SESSION_TS_KEY, String(Date.now()));
 }
 
-// ─── Admin Login Form ─────────────────────────────────────────────────────────
+// ─── Admin Login Form (Two-Factor: Secret Key → Email OTP) ───────────────────
 function AdminLoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const [userId, setUserId] = useState("");
-  const [passcode, setPasscode] = useState("");
+  const [step, setStep] = useState<"key" | "otp">("key");
+  const [secretKey, setSecretKey] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const passcodeRef = useRef<HTMLInputElement>(null);
+  const { actor } = useActor(createActor);
 
-  const handleSubmit = useCallback(
+  const handleKeySubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      setError("");
-      if (!userId.trim() || !passcode) {
-        setError("Please enter both User ID and Passcode.");
+      if (!secretKey.trim()) {
+        setError("Please enter the Admin Secret Key.");
+        return;
+      }
+      if (!actor) {
+        setError("Connecting to backend… please wait.");
         return;
       }
       setLoading(true);
+      setError("");
       try {
-        const hash = await sha256(passcode);
-        if (userId.trim() === ADMIN_USER_ID && hash === ADMIN_PASSCODE_HASH) {
-          createSession();
-          onSuccess();
+        const res = await actor.adminVerifyKey(secretKey.trim());
+        if ("ok" in res) {
+          // Request OTP to be sent
+          await actor.adminRequestOtp();
+          setStep("otp");
         } else {
-          setError("Invalid credentials. Please try again.");
+          setError(res.err ?? "Invalid key. Please try again.");
         }
       } catch {
         setError("Authentication error. Please try again.");
@@ -196,13 +201,39 @@ function AdminLoginForm({ onSuccess }: { onSuccess: () => void }) {
         setLoading(false);
       }
     },
-    [userId, passcode, onSuccess],
+    [secretKey, actor],
+  );
+
+  const handleOtpSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!otp.trim() || otp.length < 6) {
+        setError("Please enter the 6-digit verification code.");
+        return;
+      }
+      if (!actor) return;
+      setLoading(true);
+      setError("");
+      try {
+        const res = await actor.adminVerifyOtp(otp.trim());
+        if ("ok" in res) {
+          createSession(res.ok);
+          onSuccess();
+        } else {
+          setError(res.err ?? "Invalid code. Please try again.");
+        }
+      } catch {
+        setError("Verification error. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [otp, actor, onSuccess],
   );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        {/* Card */}
         <div className="bg-card border border-border rounded-2xl shadow-elevated p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
@@ -213,74 +244,135 @@ function AdminLoginForm({ onSuccess }: { onSuccess: () => void }) {
               Admin Access
             </h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to manage AssamRoots
+              {step === "key"
+                ? "Enter your admin secret key to continue"
+                : "Verify your identity"}
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="admin-userid" className="text-sm font-semibold">
-                Admin User ID
-              </Label>
-              <Input
-                id="admin-userid"
-                type="text"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="Enter your user ID"
-                autoComplete="username"
-                className="h-11"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") passcodeRef.current?.focus();
-                }}
-                data-ocid="admin.login.userid_input"
-                required
-              />
-            </div>
+          {/* Step indicator */}
+          <div className="flex items-center justify-center gap-2">
+            <div
+              className={`w-2 h-2 rounded-full ${step === "key" ? "bg-primary" : "bg-primary/40"}`}
+            />
+            <div
+              className={`w-8 h-0.5 ${step === "otp" ? "bg-primary" : "bg-border"}`}
+            />
+            <div
+              className={`w-2 h-2 rounded-full ${step === "otp" ? "bg-primary" : "bg-border"}`}
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="admin-passcode" className="text-sm font-semibold">
-                Passcode
-              </Label>
-              <div className="relative">
-                <KeyRound
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-                />
+          {step === "key" ? (
+            <form onSubmit={handleKeySubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="admin-secret-key"
+                  className="text-sm font-semibold"
+                >
+                  Admin Secret Key
+                </Label>
+                <div className="relative">
+                  <KeyRound
+                    size={15}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                  />
+                  <Input
+                    id="admin-secret-key"
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder="Enter secret key"
+                    autoComplete="current-password"
+                    className="h-12 pl-10 text-base"
+                    data-ocid="admin.login.secretkey_input"
+                    autoFocus
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2"
+                  data-ocid="admin.login.error_state"
+                >
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="btn-primary border-0 w-full h-11 text-sm font-semibold"
+                disabled={loading}
+                data-ocid="admin.login.submit_button"
+              >
+                {loading ? "Verifying…" : "Continue"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleOtpSubmit} className="space-y-4">
+              <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 text-center">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  A 6-digit verification code has been sent to{" "}
+                  <span className="font-semibold text-foreground">
+                    assamshop@assamroots.shop
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-otp" className="text-sm font-semibold">
+                  Verification Code
+                </Label>
                 <Input
-                  ref={passcodeRef}
-                  id="admin-passcode"
-                  type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Enter your passcode"
-                  autoComplete="current-password"
-                  className="h-11 pl-10"
-                  data-ocid="admin.login.passcode_input"
+                  id="admin-otp"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="h-12 text-center text-xl tracking-[0.5em] font-mono"
+                  data-ocid="admin.login.otp_input"
+                  autoFocus
                   required
                 />
               </div>
-            </div>
 
-            {error && (
-              <div
-                className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2"
-                data-ocid="admin.login.error_state"
+              {error && (
+                <div
+                  className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2"
+                  data-ocid="admin.login.otp_error_state"
+                >
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="btn-primary border-0 w-full h-11 text-sm font-semibold"
+                disabled={loading || otp.length < 6}
+                data-ocid="admin.login.otp_submit_button"
               >
-                {error}
-              </div>
-            )}
+                {loading ? "Verifying…" : "Sign In"}
+              </Button>
 
-            <Button
-              type="submit"
-              className="btn-primary border-0 w-full h-11 text-sm font-semibold"
-              disabled={loading}
-              data-ocid="admin.login.submit_button"
-            >
-              {loading ? "Signing in…" : "Sign In"}
-            </Button>
-          </form>
+              <button
+                type="button"
+                className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => {
+                  setStep("key");
+                  setOtp("");
+                  setError("");
+                }}
+                data-ocid="admin.login.back_button"
+              >
+                ← Back to key entry
+              </button>
+            </form>
+          )}
 
           <p className="text-[11px] text-center text-muted-foreground">
             Session expires automatically after 30 minutes of inactivity.
@@ -338,6 +430,8 @@ function FormField({
   onChange,
   type = "text",
   placeholder,
+  min,
+  max,
 }: {
   id: string;
   label: string;
@@ -345,6 +439,8 @@ function FormField({
   onChange: (v: string) => void;
   type?: string;
   placeholder?: string;
+  min?: number;
+  max?: number;
 }) {
   return (
     <div className="space-y-1.5">
@@ -357,6 +453,8 @@ function FormField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        min={min}
+        max={max}
         className="h-9 text-sm"
         data-ocid={`admin.field.${id}`}
       />
@@ -413,7 +511,7 @@ function categoryToForm(c: Category): CategoryFormValues {
 // ─── Tab navigation ───────────────────────────────────────────────────────────
 const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "homepage", label: "Homepage", icon: <Home size={13} /> },
-  { id: "herobanners", label: "Banners", icon: <Image size={13} /> },
+  { id: "herobanners", label: "Slideshow", icon: <Image size={13} /> },
   { id: "featuredblocks", label: "Stories", icon: <LayoutGrid size={13} /> },
   { id: "video", label: "Video", icon: <Video size={13} /> },
   { id: "products", label: "Products", icon: <Package size={13} /> },
@@ -424,7 +522,411 @@ const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "discounts", label: "Discounts", icon: <PercentCircle size={13} /> },
   { id: "branding", label: "Branding", icon: <Paintbrush size={13} /> },
   { id: "footer", label: "Footer", icon: <Globe size={13} /> },
+  { id: "vendors", label: "Vendors", icon: <Users size={13} /> },
+  {
+    id: "vendorproducts",
+    label: "Vendor Products",
+    icon: <ShoppingBag size={13} />,
+  },
 ];
+
+// ─── Vendor Products Panel ────────────────────────────────────────────────────
+
+function VendorProductsPanel() {
+  const { actor } = useActor(createActor);
+  const [products, setProducts] = useState<VendorProductView[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [taxInputs, setTaxInputs] = useState<Record<string, number>>({});
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>(
+    {},
+  );
+  const [showRejectInput, setShowRejectInput] = useState<
+    Record<string, boolean>
+  >({});
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const sessionKey = localStorage.getItem(SESSION_KEY) ?? "";
+
+  const loadProducts = useCallback(async () => {
+    if (!actor) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await actor.adminListVendorProducts(sessionKey);
+      setProducts(res as VendorProductView[]);
+    } catch (_e) {
+      setError("Failed to load vendor products");
+    } finally {
+      setLoading(false);
+    }
+  }, [actor, sessionKey]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const grouped = products.reduce<Record<string, VendorProductView[]>>(
+    (acc, p) => {
+      const key = p.vendorId.toString();
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(p);
+      return acc;
+    },
+    {},
+  );
+
+  const doAction = async (
+    key: string,
+    fn: () => Promise<{ ok?: unknown; err?: string }>,
+  ) => {
+    setActionLoading((p) => ({ ...p, [key]: true }));
+    try {
+      const res = await fn();
+      if ("ok" in res) {
+        toast.success("Action completed");
+        await loadProducts();
+      } else {
+        toast.error(res.err ?? "Action failed");
+        if (res.err === "Unauthorized") {
+          clearSession();
+          window.location.reload();
+        }
+      }
+    } catch {
+      toast.error("Action failed");
+    } finally {
+      setActionLoading((p) => ({ ...p, [key]: false }));
+    }
+  };
+
+  if (selectedVendorId) {
+    const vendorProducts = products.filter(
+      (p) => p.vendorId.toString() === selectedVendorId,
+    );
+    const vendorName = vendorProducts[0]?.vendorName ?? "Vendor";
+    const vendorEmail = vendorProducts[0]?.vendorEmail ?? "";
+    const pending = vendorProducts.filter(
+      (p) => p.status === Variant_pending_approved_rejected.pending,
+    );
+    const approved = vendorProducts.filter(
+      (p) => p.status === Variant_pending_approved_rejected.approved,
+    );
+    const rejected = vendorProducts.filter(
+      (p) => p.status === Variant_pending_approved_rejected.rejected,
+    );
+
+    return (
+      <div className="space-y-5" data-ocid="admin.vendorproducts.detail">
+        <button
+          type="button"
+          onClick={() => setSelectedVendorId(null)}
+          className="text-xs text-primary hover:underline"
+          data-ocid="admin.vendorproducts.back_button"
+        >
+          ← Back to all vendors
+        </button>
+        <PanelHeader
+          title={`Products from ${vendorName}`}
+          location={`${vendorEmail} — review, tax, and approve vendor-submitted products`}
+        />
+
+        {/* Pending */}
+        <div>
+          <h3 className="text-sm font-bold text-foreground mb-3">
+            Pending ({pending.length})
+          </h3>
+          {pending.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No pending products.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {pending.map((product) => {
+                const pid = product.id.toString();
+                const tax = taxInputs[pid] ?? 0;
+                const base = Number(product.basePrice) / 100;
+                const final = base * (1 + tax / 100);
+                return (
+                  <div
+                    key={pid}
+                    className="bg-card border border-border rounded-xl p-4 space-y-3"
+                    data-ocid={`admin.vendorproducts.item.${pid}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-foreground">
+                          {product.productName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {product.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Category: {product.category}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Base Price: ₹{base.toFixed(2)}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">
+                        Pending
+                      </Badge>
+                    </div>
+
+                    {product.imageUrls.length > 0 && (
+                      <div className="flex gap-2">
+                        {product.imageUrls.slice(0, 3).map((url) => (
+                          <img
+                            key={url}
+                            src={url}
+                            alt=""
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {product.fssaiDocumentUrl && (
+                      <a
+                        href={product.fssaiDocumentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View FSSAI Document
+                      </a>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <Label className="text-xs">Tax (%)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={tax}
+                        onChange={(e) =>
+                          setTaxInputs((p) => ({
+                            ...p,
+                            [pid]: Number(e.target.value),
+                          }))
+                        }
+                        className="h-8 text-xs w-20"
+                        data-ocid={`admin.vendorproducts.tax_input.${pid}`}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Final: ₹{final.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 h-8 text-xs"
+                        disabled={actionLoading[`approve-${pid}`]}
+                        onClick={() =>
+                          doAction(`approve-${pid}`, () =>
+                            actor!.adminApproveVendorProduct(
+                              sessionKey,
+                              product.id,
+                              BigInt(tax),
+                              null,
+                            ),
+                          )
+                        }
+                        data-ocid={`admin.vendorproducts.approve_button.${pid}`}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 text-xs"
+                        disabled={actionLoading[`reject-${pid}`]}
+                        onClick={() =>
+                          setShowRejectInput((p) => ({ ...p, [pid]: !p[pid] }))
+                        }
+                        data-ocid={`admin.vendorproducts.reject_toggle.${pid}`}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+
+                    {showRejectInput[pid] && (
+                      <div className="space-y-2">
+                        <textarea
+                          value={rejectReasons[pid] ?? ""}
+                          onChange={(e) =>
+                            setRejectReasons((p) => ({
+                              ...p,
+                              [pid]: e.target.value,
+                            }))
+                          }
+                          placeholder="Reason for rejection"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
+                          rows={2}
+                          data-ocid={`admin.vendorproducts.reject_reason.${pid}`}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 text-xs"
+                          disabled={
+                            !rejectReasons[pid]?.trim() ||
+                            actionLoading[`reject-${pid}`]
+                          }
+                          onClick={() =>
+                            doAction(`reject-${pid}`, () =>
+                              actor!.adminRejectVendorProduct(
+                                sessionKey,
+                                product.id,
+                                rejectReasons[pid] ?? "",
+                              ),
+                            )
+                          }
+                          data-ocid={`admin.vendorproducts.confirm_reject_button.${pid}`}
+                        >
+                          Confirm Reject
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Approved */}
+        {approved.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-emerald-700 mb-3">
+              Approved ({approved.length})
+            </h3>
+            <div className="space-y-3">
+              {approved.map((product) => (
+                <div
+                  key={product.id.toString()}
+                  className="bg-emerald-50 border border-emerald-200 rounded-xl p-3"
+                >
+                  <p className="text-sm font-semibold text-emerald-800">
+                    {product.productName}
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    Final Price: ₹
+                    {(Number(product.finalPrice ?? 0) / 100).toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Rejected */}
+        {rejected.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-red-700 mb-3">
+              Rejected ({rejected.length})
+            </h3>
+            <div className="space-y-3">
+              {rejected.map((product) => (
+                <div
+                  key={product.id.toString()}
+                  className="bg-red-50 border border-red-200 rounded-xl p-3"
+                >
+                  <p className="text-sm font-semibold text-red-800">
+                    {product.productName}
+                  </p>
+                  <p className="text-xs text-red-700">
+                    Reason: {product.rejectionReason ?? "—"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5" data-ocid="admin.vendorproducts.panel">
+      <PanelHeader
+        title="Vendor Products"
+        location="Review and approve products submitted by vendors"
+      />
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-border rounded-xl p-4 animate-pulse space-y-2"
+            >
+              <div className="h-4 bg-muted rounded w-1/3" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : Object.keys(grouped).length === 0 ? (
+        <div
+          className="text-center py-12"
+          data-ocid="admin.vendorproducts.empty_state"
+        >
+          <ShoppingBag
+            size={36}
+            className="text-muted-foreground/30 mx-auto mb-3"
+          />
+          <p className="text-sm text-muted-foreground">
+            No vendor products found.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(grouped).map(([vid, list]) => {
+            const pendingCount = list.filter(
+              (p) => p.status === Variant_pending_approved_rejected.pending,
+            ).length;
+            return (
+              <button
+                key={vid}
+                type="button"
+                className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-sm transition-shadow text-left w-full"
+                onClick={() => setSelectedVendorId(vid)}
+                data-ocid={`admin.vendorproducts.vendor_card.${vid}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground">
+                      {list[0]?.vendorName ?? "Unknown Vendor"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {list[0]?.vendorEmail ?? ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {list.length} product(s)
+                    </p>
+                  </div>
+                  {pendingCount > 0 && (
+                    <Badge variant="default" className="text-[10px]">
+                      {pendingCount} pending
+                    </Badge>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Hero Banners Panel ───────────────────────────────────────────────────────
 
@@ -436,6 +938,7 @@ interface BannerFormValues {
   ctaSlug: string;
   order: string;
   isActive: boolean;
+  durationSeconds: string;
 }
 
 const BLANK_BANNER: BannerFormValues = {
@@ -446,6 +949,7 @@ const BLANK_BANNER: BannerFormValues = {
   ctaSlug: "",
   order: "1",
   isActive: true,
+  durationSeconds: "5",
 };
 
 function bannerToForm(b: HeroBanner): BannerFormValues {
@@ -457,6 +961,7 @@ function bannerToForm(b: HeroBanner): BannerFormValues {
     ctaSlug: b.ctaSlug,
     order: b.order.toString(),
     isActive: b.isActive,
+    durationSeconds: Number(b.durationSeconds ?? 5n).toString(),
   };
 }
 
@@ -469,7 +974,19 @@ function formToBannerInput(form: BannerFormValues): HeroBannerInput {
     ctaSlug: form.ctaSlug,
     order: BigInt(Number.parseInt(form.order) || 1),
     isActive: form.isActive,
+    durationSeconds: BigInt(Number.parseInt(form.durationSeconds) || 5),
   };
+}
+
+function PanelHeader({ title, location }: { title: string; location: string }) {
+  return (
+    <div className="mb-5 pb-3 border-b border-border">
+      <h2 className="text-lg font-bold text-foreground">{title}</h2>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        Appears on: <span className="font-medium">{location}</span>
+      </p>
+    </div>
+  );
 }
 
 function HeroBannersPanel() {
@@ -498,46 +1015,74 @@ function HeroBannersPanel() {
   };
 
   type ActorExt = {
-    adminAddHeroBanner: (input: HeroBannerInput) => Promise<HeroBanner>;
+    adminAddHeroBanner: (
+      adminToken: string,
+      input: HeroBannerInput,
+    ) => Promise<HeroBanner>;
     adminUpdateHeroBanner: (
+      adminToken: string,
       id: bigint,
       input: HeroBannerInput,
-    ) => Promise<HeroBanner | null>;
-    adminDeleteHeroBanner: (id: bigint) => Promise<boolean>;
+    ) => Promise<
+      { __kind__: "ok"; ok: HeroBanner } | { __kind__: "err"; err: string }
+    >;
+    adminDeleteHeroBanner: (
+      adminToken: string,
+      id: bigint,
+    ) => Promise<
+      { __kind__: "ok"; ok: boolean } | { __kind__: "err"; err: string }
+    >;
   };
 
   const handleAdd = async () => {
+    if (actorFetching) {
+      toast.error("Still connecting, please try again in a moment.");
+      return;
+    }
     if (!actor || !form.title.trim()) return;
     setSaving(true);
     try {
       await (actor as unknown as ActorExt).adminAddHeroBanner(
+        localStorage.getItem(SESSION_KEY) ?? "",
         formToBannerInput(form),
       );
       await queryClient.invalidateQueries({ queryKey: ["adminHeroBanners"] });
       await queryClient.invalidateQueries({ queryKey: ["heroBanners"] });
-      toast.success("Banner added");
+      toast.success(
+        "Slide saved! It will now appear in the homepage slideshow.",
+      );
       setAddOpen(false);
     } catch {
-      toast.error("Failed to add banner");
+      toast.error("Failed to add slide");
     } finally {
       setSaving(false);
     }
   };
 
   const handleEdit = async () => {
+    if (actorFetching) {
+      toast.error("Still connecting, please try again in a moment.");
+      return;
+    }
     if (!actor || !editDialog.banner || !form.title.trim()) return;
     setSaving(true);
     try {
-      await (actor as unknown as ActorExt).adminUpdateHeroBanner(
+      const updateResult = await (
+        actor as unknown as ActorExt
+      ).adminUpdateHeroBanner(
+        localStorage.getItem(SESSION_KEY) ?? "",
         editDialog.banner.id,
         formToBannerInput(form),
       );
+      if (updateResult.__kind__ === "err") throw new Error(updateResult.err);
       await queryClient.invalidateQueries({ queryKey: ["adminHeroBanners"] });
       await queryClient.invalidateQueries({ queryKey: ["heroBanners"] });
-      toast.success("Banner updated");
+      toast.success(
+        "Slide updated! The homepage slideshow now reflects your changes.",
+      );
       setEditDialog({ open: false, banner: null });
-    } catch {
-      toast.error("Failed to update banner");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update slide");
     } finally {
       setSaving(false);
     }
@@ -550,12 +1095,15 @@ function HeroBannersPanel() {
       return;
     }
     try {
-      await (actor as unknown as ActorExt).adminDeleteHeroBanner(id);
+      const deleteResult = await (
+        actor as unknown as ActorExt
+      ).adminDeleteHeroBanner(localStorage.getItem(SESSION_KEY) ?? "", id);
+      if (deleteResult.__kind__ === "err") throw new Error(deleteResult.err);
       await queryClient.invalidateQueries({ queryKey: ["adminHeroBanners"] });
       await queryClient.invalidateQueries({ queryKey: ["heroBanners"] });
-      toast.success("Banner deleted");
-    } catch {
-      toast.error("Failed to delete banner");
+      toast.success("Slide removed from the homepage slideshow.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete slide");
     } finally {
       setDeleteConfirm(null);
     }
@@ -573,9 +1121,13 @@ function HeroBannersPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Hero Slideshow"
+        location="Homepage — top rotating banner"
+      />
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground">
-          {banners?.length ?? 0} banners
+          {banners?.length ?? 0} slides
         </p>
         <Button
           size="sm"
@@ -583,7 +1135,7 @@ function HeroBannersPanel() {
           onClick={openAdd}
           data-ocid="admin.herobanners.add_button"
         >
-          <Plus size={14} /> Add Banner
+          <Plus size={14} /> Add Slide
         </Button>
       </div>
 
@@ -593,11 +1145,9 @@ function HeroBannersPanel() {
           data-ocid="admin.herobanners.empty_state"
         >
           <Image size={32} className="text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-foreground">
-            No banners yet
-          </p>
+          <p className="text-sm font-semibold text-foreground">No slides yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Add your first homepage banner to get started.
+            Add your first slideshow slide to get started.
           </p>
         </div>
       ) : (
@@ -629,9 +1179,12 @@ function HeroBannersPanel() {
                   <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
                     {banner.subtitle}
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-[10px] text-muted-foreground">
                       Order: {banner.order.toString()}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      ⏱ {Number(banner.durationSeconds ?? 5n)}s
                     </span>
                     <Badge
                       className={`text-[9px] px-1.5 py-0 border-0 ${
@@ -659,7 +1212,9 @@ function HeroBannersPanel() {
                   size="sm"
                   variant="outline"
                   onClick={() => handleDelete(banner.id)}
-                  className={`h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 ${deleteConfirm === banner.id ? "bg-destructive/10" : ""}`}
+                  className={`h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 ${
+                    deleteConfirm === banner.id ? "bg-destructive/10" : ""
+                  }`}
                   title={
                     deleteConfirm === banner.id
                       ? "Tap again to confirm"
@@ -679,7 +1234,7 @@ function HeroBannersPanel() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Hero Banner</DialogTitle>
+            <DialogTitle>Add Slide</DialogTitle>
           </DialogHeader>
           <BannerFormFields form={form} setField={setField} />
           <DialogFooter>
@@ -692,7 +1247,7 @@ function HeroBannersPanel() {
               onClick={handleAdd}
               data-ocid="admin.herobanners.save_button"
             >
-              {saving ? "Saving…" : "Save Banner"}
+              {saving ? "Saving…" : "Save Slide"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -705,7 +1260,7 @@ function HeroBannersPanel() {
       >
         <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Banner</DialogTitle>
+            <DialogTitle>Edit Slide</DialogTitle>
           </DialogHeader>
           <BannerFormFields form={form} setField={setField} />
           <DialogFooter>
@@ -721,7 +1276,7 @@ function HeroBannersPanel() {
               onClick={handleEdit}
               data-ocid="admin.herobanners.edit.save_button"
             >
-              {saving ? "Saving…" : "Update Banner"}
+              {saving ? "Saving…" : "Update Slide"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -746,34 +1301,40 @@ function BannerFormFields({
         onChange={setField("title") as (v: string) => void}
         placeholder="Fresh from Assam's Tea Gardens"
       />
+      <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+        Large bold text displayed on the slide
+      </p>
       <FormField
         id="banner-subtitle"
         label="Subtitle"
         value={form.subtitle}
         onChange={setField("subtitle") as (v: string) => void}
-        placeholder="Up to 20% off this season"
+        placeholder="Premium orthodox teas — authentically Assamese"
       />
+      <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+        Smaller text shown below the heading
+      </p>
       <ImageUpload
         value={form.imageUrl}
         onChange={setField("imageUrl") as (v: string) => void}
-        label="Banner Image"
+        label="Slide Image"
       />
-      <div className="grid grid-cols-2 gap-3">
-        <FormField
-          id="banner-cta-text"
-          label="CTA Button Text"
-          value={form.ctaText}
-          onChange={setField("ctaText") as (v: string) => void}
-          placeholder="Shop Now"
-        />
-        <FormField
-          id="banner-cta-slug"
-          label="CTA Link Slug"
-          value={form.ctaSlug}
-          onChange={setField("ctaSlug") as (v: string) => void}
-          placeholder="assam-tea"
-        />
-      </div>
+      <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+        Full-width image shown behind the text — paste a direct image URL
+      </p>
+      <FormField
+        id="banner-duration"
+        label="Display Duration (seconds)"
+        value={form.durationSeconds}
+        onChange={setField("durationSeconds") as (v: string) => void}
+        type="number"
+        placeholder="5"
+        min={1}
+        max={60}
+      />
+      <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+        Seconds this slide stays on screen before advancing
+      </p>
       <FormField
         id="banner-order"
         label="Display Order"
@@ -797,6 +1358,9 @@ function BannerFormFields({
         >
           Active (show on homepage)
         </Label>
+        <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+          Uncheck to hide this slide without deleting it
+        </p>
       </div>
     </div>
   );
@@ -872,13 +1436,18 @@ function FeaturedBlocksPanel() {
 
   type ActorExt = {
     adminAddFeaturedBlock: (
+      adminToken: string,
       input: FeaturedBlockInput,
     ) => Promise<FeaturedBlock>;
     adminUpdateFeaturedBlock: (
+      adminToken: string,
       id: bigint,
       input: FeaturedBlockInput,
     ) => Promise<FeaturedBlock | null>;
-    adminDeleteFeaturedBlock: (id: bigint) => Promise<boolean>;
+    adminDeleteFeaturedBlock: (
+      adminToken: string,
+      id: bigint,
+    ) => Promise<boolean>;
   };
 
   const handleAdd = async () => {
@@ -886,6 +1455,7 @@ function FeaturedBlocksPanel() {
     setSaving(true);
     try {
       await (actor as unknown as ActorExt).adminAddFeaturedBlock(
+        localStorage.getItem(SESSION_KEY) ?? "",
         formToBlockInput(form),
       );
       await queryClient.invalidateQueries({
@@ -906,6 +1476,7 @@ function FeaturedBlocksPanel() {
     setSaving(true);
     try {
       await (actor as unknown as ActorExt).adminUpdateFeaturedBlock(
+        localStorage.getItem(SESSION_KEY) ?? "",
         editDialog.block.id,
         formToBlockInput(form),
       );
@@ -929,7 +1500,10 @@ function FeaturedBlocksPanel() {
       return;
     }
     try {
-      await (actor as unknown as ActorExt).adminDeleteFeaturedBlock(id);
+      await (actor as unknown as ActorExt).adminDeleteFeaturedBlock(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+      );
       await queryClient.invalidateQueries({
         queryKey: ["adminFeaturedBlocks"],
       });
@@ -954,6 +1528,10 @@ function FeaturedBlocksPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Featured Blocks"
+        location="Homepage — clickable story cards below the slideshow"
+      />
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground">
           {blocks?.length ?? 0} story blocks
@@ -1278,7 +1856,10 @@ function ProductsPanel() {
     if (!actor) return;
     setSaving(true);
     try {
-      await actor.adminAddProduct(formToProductInput(form));
+      await actor.adminAddProduct(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        formToProductInput(form),
+      );
       await queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       toast.success("Product added successfully");
       setAddOpen(false);
@@ -1294,6 +1875,7 @@ function ProductsPanel() {
     setSaving(true);
     try {
       await actor.adminUpdateProduct(
+        localStorage.getItem(SESSION_KEY) ?? "",
         editDialog.product.id,
         formToProductInput(form),
       );
@@ -1310,7 +1892,10 @@ function ProductsPanel() {
   const handleDelete = async (id: bigint) => {
     if (!actor) return;
     try {
-      await actor.adminDeleteProduct(id);
+      await actor.adminDeleteProduct(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+      );
       await queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       toast.success("Product deleted");
     } catch {
@@ -1330,6 +1915,10 @@ function ProductsPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Products"
+        location="Product catalog — shown on category and search pages"
+      />
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground">
           {products.length} products
@@ -1478,7 +2067,7 @@ function ProductFormDialog({
     queryKey: ["adminCategories"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetCategories();
+      return actor.adminGetCategories(localStorage.getItem(SESSION_KEY) ?? "");
     },
     enabled: !!actor && !actorFetching,
   });
@@ -1632,7 +2221,7 @@ function CategoriesPanel() {
     queryKey: ["adminCategories"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetCategories();
+      return actor.adminGetCategories(localStorage.getItem(SESSION_KEY) ?? "");
     },
     enabled: !!actor && !actorFetching,
   });
@@ -1654,6 +2243,7 @@ function CategoriesPanel() {
     setSaving(true);
     try {
       const result = await actor.adminAddCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
         form.name,
         form.slug,
         form.description,
@@ -1677,6 +2267,7 @@ function CategoriesPanel() {
     setSaving(true);
     try {
       const result = await actor.adminUpdateCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
         editDialog.category.id,
         form.name,
         form.slug,
@@ -1703,7 +2294,10 @@ function CategoriesPanel() {
       return;
     }
     try {
-      const result = await actor.adminDeleteCategory(id);
+      const result = await actor.adminDeleteCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+      );
       if (result.__kind__ === "err") throw new Error(result.err);
       await queryClient.invalidateQueries({ queryKey: ["adminCategories"] });
       toast.success("Category deleted");
@@ -1728,6 +2322,10 @@ function CategoriesPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Categories"
+        location="Products page — top-level navigation"
+      />
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-muted-foreground">
           {categories?.length ?? 0} categories
@@ -1924,7 +2522,7 @@ function SubCategoriesPanel() {
     queryKey: ["adminCategories"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetCategories();
+      return actor.adminGetCategories(localStorage.getItem(SESSION_KEY) ?? "");
     },
     enabled: !!actor && !actorFetching,
   });
@@ -1951,6 +2549,7 @@ function SubCategoriesPanel() {
     setSaving(true);
     try {
       const result = await actor.adminAddSubCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
         BigInt(selectedCategoryId),
         form.name,
         form.imageUrl,
@@ -1973,6 +2572,7 @@ function SubCategoriesPanel() {
     setSaving(true);
     try {
       const result = await actor.adminUpdateSubCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
         BigInt(selectedCategoryId),
         editDialog.subCategory.id,
         form.name,
@@ -1999,6 +2599,7 @@ function SubCategoriesPanel() {
     }
     try {
       const result = await actor.adminDeleteSubCategory(
+        localStorage.getItem(SESSION_KEY) ?? "",
         BigInt(selectedCategoryId),
         subId,
       );
@@ -2026,6 +2627,10 @@ function SubCategoriesPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Sub-Categories"
+        location="Products page — filters under each category"
+      />
       {/* Parent category selector */}
       <div className="mb-4 space-y-1.5">
         <Label htmlFor="parent-category" className="text-xs font-semibold">
@@ -2276,12 +2881,14 @@ function VideoBytePanel() {
     try {
       type ActorExt = {
         adminUpdateVideoByte: (
+          adminToken: string,
           url: string,
           enabled: boolean,
           title: string,
         ) => Promise<void>;
       };
       await (actor as unknown as ActorExt).adminUpdateVideoByte(
+        localStorage.getItem(SESSION_KEY) ?? "",
         videoUrl,
         videoEnabled,
         videoTitle,
@@ -2319,6 +2926,10 @@ function VideoBytePanel() {
 
   return (
     <div className="space-y-5" data-ocid="admin.video.panel">
+      <PanelHeader
+        title="Video Byte"
+        location="Homepage — video section with gradient overlay"
+      />
       {/* Settings card */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-4">
         <div>
@@ -2485,6 +3096,7 @@ function ServicesPanel() {
     setSavingAvailability(true);
     try {
       await actor.adminUpdateServicesAvailability(
+        localStorage.getItem(SESSION_KEY) ?? "",
         servicesAvailable,
         unavailabilityMessage,
       );
@@ -2504,7 +3116,9 @@ function ServicesPanel() {
     queryKey: ["adminServiceRequests"],
     queryFn: async () => {
       if (!actor) return [];
-      const all = await actor.adminGetServiceRequests();
+      const all = await actor.adminGetServiceRequests(
+        localStorage.getItem(SESSION_KEY) ?? "",
+      );
       return [...all].sort((a, b) => Number(b.submittedAt - a.submittedAt));
     },
     enabled: !!actor && !actorFetching,
@@ -2516,14 +3130,21 @@ function ServicesPanel() {
     status: ServiceRequestStatus,
   ) => {
     if (!actor) return;
-    await actor.adminUpdateServiceRequestStatus(id, status);
+    await actor.adminUpdateServiceRequestStatus(
+      localStorage.getItem(SESSION_KEY) ?? "",
+      id,
+      status,
+    );
     await queryClient.invalidateQueries({ queryKey: ["adminServiceRequests"] });
     toast.success("Status updated");
   };
 
   const handleDelete = async (id: bigint) => {
     if (!actor) return;
-    await actor.adminDeleteServiceRequest(id);
+    await actor.adminDeleteServiceRequest(
+      localStorage.getItem(SESSION_KEY) ?? "",
+      id,
+    );
     await queryClient.invalidateQueries({ queryKey: ["adminServiceRequests"] });
     toast.success("Request deleted");
   };
@@ -2834,7 +3455,11 @@ function InventoryPanel() {
     );
     setSaving((p) => ({ ...p, [key]: true }));
     try {
-      await actor.adminUpdateStock(id, newStock);
+      await actor.adminUpdateStock(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+        newStock,
+      );
       await queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       setStockEdits((p) => {
         const n = { ...p };
@@ -2861,6 +3486,10 @@ function InventoryPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Inventory"
+        location="All product pages — stock badge and availability"
+      />
       <Input
         placeholder="Search products…"
         value={search}
@@ -2983,7 +3612,11 @@ function DiscountsPanel() {
     );
     setSaving((p) => ({ ...p, [key]: true }));
     try {
-      await actor.adminSetDiscount(id, pct);
+      await actor.adminSetDiscount(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+        pct,
+      );
       await queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       setDiscountEdits((p) => {
         const n = { ...p };
@@ -3010,6 +3643,10 @@ function DiscountsPanel() {
 
   return (
     <>
+      <PanelHeader
+        title="Discounts"
+        location="Product cards — shown as strikethrough original price"
+      />
       <Input
         placeholder="Search products…"
         value={search}
@@ -3159,6 +3796,10 @@ function BrandingPanel() {
 
   return (
     <div className="space-y-6" data-ocid="admin.branding.panel">
+      <PanelHeader
+        title="Branding"
+        location="Site-wide — logo in header and favicon in browser tab"
+      />
       <div className="bg-muted/30 border border-border rounded-xl p-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Current Branding
@@ -3328,7 +3969,9 @@ export default function AdminPage() {
     queryKey: ["adminServiceRequests"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetServiceRequests();
+      return actor.adminGetServiceRequests(
+        localStorage.getItem(SESSION_KEY) ?? "",
+      );
     },
     enabled: !!actor && !actorFetching && isLoggedIn,
     refetchInterval: 60_000,
@@ -3408,6 +4051,8 @@ export default function AdminPage() {
         {activeTab === "discounts" && <DiscountsPanel />}
         {activeTab === "branding" && <BrandingPanel />}
         {activeTab === "footer" && <FooterPanel />}
+        {activeTab === "vendors" && <VendorsPanel />}
+        {activeTab === "vendorproducts" && <VendorProductsPanel />}
       </div>
     </Layout>
   );
@@ -3472,12 +4117,14 @@ function HomepagePanel() {
     try {
       type ActorExt = {
         adminUpdateHeroAndHowitworks: (
+          adminToken: string,
           heroTagline: string,
           heroSubtitle: string,
           howitworksSteps: Array<{ title: string; description: string }>,
         ) => Promise<void>;
       };
       await (actor as unknown as ActorExt).adminUpdateHeroAndHowitworks(
+        localStorage.getItem(SESSION_KEY) ?? "",
         heroTagline,
         heroSubtitle,
         steps,
@@ -3503,6 +4150,10 @@ function HomepagePanel() {
 
   return (
     <div className="space-y-5" data-ocid="admin.homepage.panel">
+      <PanelHeader
+        title="Homepage Content"
+        location="Homepage — tagline and How It Works section"
+      />
       {/* Hero Section */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-4">
         <div>
@@ -3722,6 +4373,7 @@ function FooterPanel() {
     setSavingBranding(true);
     try {
       await actor.adminUpdateFooterSettings(
+        localStorage.getItem(SESSION_KEY) ?? "",
         tagline,
         copyright,
         aboutContent,
@@ -3741,6 +4393,7 @@ function FooterPanel() {
     setSavingSocials(true);
     try {
       await actor.adminUpdateFooterSettings(
+        localStorage.getItem(SESSION_KEY) ?? "",
         tagline,
         copyright,
         aboutContent,
@@ -3765,6 +4418,7 @@ function FooterPanel() {
     setAddingReview(true);
     try {
       await actor.adminAddReview(
+        localStorage.getItem(SESSION_KEY) ?? "",
         reviewForm.reviewerName,
         BigInt(Number.parseInt(reviewForm.rating) || 5),
         reviewForm.reviewText,
@@ -3784,6 +4438,7 @@ function FooterPanel() {
     if (!actor || !editReview.id) return;
     try {
       await actor.adminUpdateReview(
+        localStorage.getItem(SESSION_KEY) ?? "",
         editReview.id,
         editReview.form.reviewerName,
         BigInt(Number.parseInt(editReview.form.rating) || 5),
@@ -3806,7 +4461,10 @@ function FooterPanel() {
     }
     setDeletingId(id);
     try {
-      await actor.adminDeleteReview(id);
+      await actor.adminDeleteReview(
+        localStorage.getItem(SESSION_KEY) ?? "",
+        id,
+      );
       await queryClient.invalidateQueries({ queryKey: ["reviews"] });
       toast.success("Review deleted");
     } catch {
@@ -3829,6 +4487,10 @@ function FooterPanel() {
 
   return (
     <div className="space-y-6" data-ocid="admin.footer.panel">
+      <PanelHeader
+        title="Footer"
+        location="Bottom of every page — tagline, social links, and reviews"
+      />
       {/* ── Branding sub-section ── */}
       <div
         className="bg-card border border-border rounded-xl p-4 space-y-4"
@@ -4254,6 +4916,380 @@ function FooterPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─── Vendors Panel ────────────────────────────────────────────────────────────
+type VendorFilter = "all" | "pending" | "approved" | "rejected" | "suspended";
+
+interface AdminVendorSummary {
+  id: { toText: () => string };
+  businessName: string;
+  contactEmail: string;
+  phone: string;
+  status: string;
+  assignedProductIds: string[];
+  bankAccountNumber?: string;
+  ifscCode?: string;
+  fssaiDocumentUrl?: string;
+}
+
+function VendorStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-800 border-amber-200",
+    approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    rejected: "bg-red-100 text-red-700 border-red-200",
+    suspended: "bg-slate-100 text-slate-600 border-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+        map[status] ?? "bg-muted text-muted-foreground border-border"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function VendorsPanel() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<VendorFilter>("all");
+  const [assignProductId, setAssignProductId] = useState<
+    Record<string, string>
+  >({});
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const { data: vendors = [], isLoading } = useQuery<AdminVendorSummary[]>({
+    queryKey: ["admin-vendors", filter],
+    queryFn: async () => {
+      if (!actor) return [];
+      const statusParam = filter === "all" ? null : (filter as VendorStatus);
+      const res = await actor.adminListVendors(statusParam);
+      return res as AdminVendorSummary[];
+    },
+    enabled: !!actor,
+  });
+
+  const doAction = async (
+    key: string,
+    fn: () => Promise<{ ok?: unknown; err?: string }>,
+  ) => {
+    setActionLoading((p) => ({ ...p, [key]: true }));
+    try {
+      const res = await fn();
+      if ("ok" in res) {
+        toast.success("Action completed");
+        queryClient.invalidateQueries({ queryKey: ["admin-vendors"] });
+      } else {
+        toast.error(res.err ?? "Action failed");
+        if (res.err === "Unauthorized") {
+          clearSession();
+          window.location.reload();
+        }
+      }
+    } catch {
+      toast.error("Action failed");
+    } finally {
+      setActionLoading((p) => ({ ...p, [key]: false }));
+    }
+  };
+
+  const filterTabs: { id: VendorFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "pending", label: "Pending" },
+    { id: "approved", label: "Approved" },
+    { id: "rejected", label: "Rejected" },
+    { id: "suspended", label: "Suspended" },
+  ];
+
+  return (
+    <div className="space-y-5" data-ocid="admin.vendors.panel">
+      <PanelHeader
+        title="Vendors"
+        location="Admin only — vendor applications and approval flow"
+      />
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-bold text-foreground">
+          Vendor Management
+        </h2>
+        <Badge variant="outline" className="text-xs">
+          {vendors.length} vendors
+        </Badge>
+      </div>
+
+      {/* Filter tabs */}
+      <div
+        className="flex gap-1 flex-wrap"
+        data-ocid="admin.vendors.filter.tab"
+      >
+        {filterTabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setFilter(t.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              filter === t.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+            data-ocid={`admin.vendors.filter_${t.id}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-border rounded-xl p-4 animate-pulse space-y-2"
+            >
+              <div className="h-4 bg-muted rounded w-1/3" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : vendors.length === 0 ? (
+        <div
+          className="text-center py-12"
+          data-ocid="admin.vendors.empty_state"
+        >
+          <Users size={36} className="text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            No vendors found for this filter.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {vendors.map((vendor, idx) => {
+            const vid = vendor.id.toText();
+            const isApproved = vendor.status === "approved";
+            const isPending = vendor.status === "pending";
+            const isSuspended = vendor.status === "suspended";
+            return (
+              <div
+                key={vid}
+                className="bg-card border border-border rounded-xl p-4 space-y-3"
+                data-ocid={`admin.vendors.item.${idx + 1}`}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">
+                      {vendor.businessName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {vendor.contactEmail}
+                    </p>
+                    {vendor.phone && (
+                      <p className="text-xs text-muted-foreground">
+                        {vendor.phone}
+                      </p>
+                    )}
+                    {vendor.bankAccountNumber && (
+                      <p className="text-xs text-muted-foreground">
+                        Bank: {vendor.bankAccountNumber}
+                      </p>
+                    )}
+                    {vendor.ifscCode && (
+                      <p className="text-xs text-muted-foreground">
+                        IFSC: {vendor.ifscCode}
+                      </p>
+                    )}
+                    {vendor.fssaiDocumentUrl && (
+                      <a
+                        href={vendor.fssaiDocumentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View FSSAI Document
+                      </a>
+                    )}
+                  </div>
+                  <VendorStatusBadge status={vendor.status} />
+                </div>
+
+                {/* Assigned products */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">
+                    Assigned Products ({vendor.assignedProductIds?.length ?? 0})
+                  </p>
+                  {vendor.assignedProductIds?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {vendor.assignedProductIds.map((pid) => (
+                        <span
+                          key={pid}
+                          className="inline-flex items-center gap-1 bg-muted rounded-md px-2 py-0.5 text-[10px] font-mono"
+                        >
+                          {pid}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              doAction(`unassign-${vid}-${pid}`, () =>
+                                actor!.adminUnassignProductFromVendor(
+                                  localStorage.getItem(SESSION_KEY) ?? "",
+                                  vendor.id as unknown as Principal,
+                                  pid,
+                                ),
+                              )
+                            }
+                            disabled={actionLoading[`unassign-${vid}-${pid}`]}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            aria-label={`Remove product ${pid}`}
+                          >
+                            <XCircle size={10} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground italic">
+                      No products assigned yet.
+                    </p>
+                  )}
+                </div>
+
+                {/* Assign product */}
+                {isApproved && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={assignProductId[vid] ?? ""}
+                      onChange={(e) =>
+                        setAssignProductId((p) => ({
+                          ...p,
+                          [vid]: e.target.value,
+                        }))
+                      }
+                      placeholder="Product ID to assign"
+                      className="h-8 text-xs flex-1"
+                      data-ocid={`admin.vendors.assign_product_input.${idx + 1}`}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="btn-primary border-0 h-8 text-xs px-3"
+                      disabled={
+                        !assignProductId[vid]?.trim() ||
+                        actionLoading[`assign-${vid}`]
+                      }
+                      onClick={() => {
+                        const pid = assignProductId[vid]?.trim();
+                        if (!pid) return;
+                        doAction(`assign-${vid}`, () =>
+                          actor!.adminAssignProductToVendor(
+                            localStorage.getItem(SESSION_KEY) ?? "",
+                            vendor.id as unknown as Principal,
+                            pid,
+                          ),
+                        ).then(() =>
+                          setAssignProductId((p) => ({ ...p, [vid]: "" })),
+                        );
+                      }}
+                      data-ocid={`admin.vendors.assign_product_button.${idx + 1}`}
+                    >
+                      Assign
+                    </Button>
+                  </div>
+                )}
+
+                {/* Reject reason */}
+                {isPending && (
+                  <div className="space-y-1">
+                    <Input
+                      value={rejectReason[vid] ?? ""}
+                      onChange={(e) =>
+                        setRejectReason((p) => ({
+                          ...p,
+                          [vid]: e.target.value,
+                        }))
+                      }
+                      placeholder="Rejection reason (required to reject)"
+                      className="h-8 text-xs"
+                      data-ocid={`admin.vendors.reject_reason_input.${idx + 1}`}
+                    />
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2 flex-wrap pt-1">
+                  {isPending && (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 h-8 text-xs"
+                        disabled={actionLoading[`approve-${vid}`]}
+                        onClick={() =>
+                          doAction(`approve-${vid}`, () =>
+                            actor!.adminApproveVendor(
+                              localStorage.getItem(SESSION_KEY) ?? "",
+                              vendor.id as unknown as Principal,
+                            ),
+                          )
+                        }
+                        data-ocid={`admin.vendors.approve_button.${idx + 1}`}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 text-xs"
+                        disabled={
+                          !rejectReason[vid]?.trim() ||
+                          actionLoading[`reject-${vid}`]
+                        }
+                        onClick={() =>
+                          doAction(`reject-${vid}`, () =>
+                            actor!.adminRejectVendor(
+                              localStorage.getItem(SESSION_KEY) ?? "",
+                              vendor.id as unknown as Principal,
+                              rejectReason[vid] ?? "",
+                            ),
+                          )
+                        }
+                        data-ocid={`admin.vendors.reject_button.${idx + 1}`}
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  {isApproved && !isSuspended && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
+                      disabled={actionLoading[`suspend-${vid}`]}
+                      onClick={() =>
+                        doAction(`suspend-${vid}`, () =>
+                          actor!.adminSuspendVendor(
+                            localStorage.getItem(SESSION_KEY) ?? "",
+                            vendor.id as unknown as Principal,
+                          ),
+                        )
+                      }
+                      data-ocid={`admin.vendors.suspend_button.${idx + 1}`}
+                    >
+                      Suspend
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

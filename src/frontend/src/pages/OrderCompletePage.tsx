@@ -7,7 +7,7 @@ import { useActor } from "@caffeineai/core-infrastructure";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CheckCircle2, LogIn, Package, ShoppingBag } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ─── Simple confetti burst (CSS-only, respects prefers-reduced-motion) ────
 
@@ -60,6 +60,7 @@ export default function OrderCompletePage() {
   const { orderId } = useSearch({ from: "/order-complete" });
   const { actor, isFetching: actorFetching } = useActor(createActor);
   const redirected = useRef(false);
+  const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated && !redirected.current) {
@@ -82,6 +83,26 @@ export default function OrderCompletePage() {
     },
     enabled: !!actor && !actorFetching && !!orderIdBigInt && isAuthenticated,
   });
+
+  // Fetch vendor names for each item
+  useEffect(() => {
+    if (!actor || actorFetching || !order?.items?.length) return;
+    const productIds = order.items.map((item) => String(item.productId));
+    Promise.all(
+      productIds.map((pid) =>
+        actor
+          .getVendorForProduct(pid)
+          .then((v) => ({ pid, name: v?.businessName ?? null }))
+          .catch(() => ({ pid, name: null })),
+      ),
+    ).then((results) => {
+      const map: Record<string, string> = {};
+      for (const { pid, name } of results) {
+        if (name) map[pid] = name;
+      }
+      setVendorNames(map);
+    });
+  }, [actor, actorFetching, order]);
 
   if (authLoading) {
     return (
@@ -346,6 +367,11 @@ export default function OrderCompletePage() {
                   <p className="text-xs text-foreground font-medium truncate flex-1 min-w-0">
                     {item.title}
                   </p>
+                  {vendorNames[String(item.productId)] && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {vendorNames[String(item.productId)]}
+                    </p>
+                  )}
                   <p className="text-xs font-semibold text-foreground flex-none">
                     ×{Number(item.quantity)}
                   </p>

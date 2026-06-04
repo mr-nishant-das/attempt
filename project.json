@@ -1,22 +1,19 @@
 {
-  "overview": "AssamRoots is an Assamese-first e-commerce platform connecting the diaspora with authentic Assamese products and services.",
+  "overview": "AssamRoots is an Assamese-first e-commerce platform connecting the diaspora with authentic Assamese products, with a full vendor marketplace supporting brand and raw material suppliers.",
   "features": [
-    "Homepage hero tagline and How It Works section",
-    "Best Sellers and New Arrivals product rows",
-    "Return and refund policy page",
-    "Customer order confirmation emails",
-    "Full product catalog with admin management",
-    "Razorpay and COD checkout",
-    "Service booking for recipients in Assam",
-    "Admin panel with 10 management tabs"
+    "Two-type vendor system: Brand Vendors with GSTIN/MRP and Raw Material Vendors with per-kg pricing",
+    "Vendor self-registration with type selection",
+    "Dynamic product submission forms based on vendor type",
+    "Admin vendor products panel with type-specific pricing review",
+    "Email notifications for vendor approvals and product status"
   ],
   "category": "e-commerce",
   "tags": [
     "assamese",
     "e-commerce",
+    "vendor-marketplace",
     "diaspora",
-    "cultural",
     "india"
   ],
-  "last_updated": "2026-05-27T18:06:54.422Z"
+  "last_updated": "2026-06-04T08:12:19.375Z"
 }

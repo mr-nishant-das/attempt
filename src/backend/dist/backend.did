@@ -22,6 +22,128 @@ type _ImmutableObjectStorageCreateCertificateResult =
    blob_hash: text;
    method: text;
  };
+type VendorType = 
+ variant {
+   brand;
+   rawMaterial;
+ };
+type VendorSummary = 
+ record {
+   address: text;
+   approvedAt: opt int;
+   assignedProductIds: vec text;
+   bankAccountNumber: text;
+   brandName: opt text;
+   businessName: text;
+   categories: vec text;
+   contactEmail: text;
+   fssaiDocumentUrl: opt text;
+   gstinNumber: opt text;
+   id: principal;
+   ifscCode: text;
+   packagingDetails: opt text;
+   phone: text;
+   registeredAt: int;
+   status: VendorStatus;
+   vendorType: VendorType;
+ };
+type VendorStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+   suspended;
+ };
+type VendorRegistration = 
+ record {
+   address: text;
+   bankAccountNumber: text;
+   brandName: opt text;
+   businessName: text;
+   categories: vec text;
+   contactEmail: text;
+   fssaiDocumentUrl: opt text;
+   gstinNumber: opt text;
+   ifscCode: text;
+   packagingDetails: opt text;
+   phone: text;
+   vendorType: VendorType;
+ };
+type VendorProfile = 
+ record {
+   address: text;
+   approvedAt: opt int;
+   assignedProductIds: vec text;
+   bankAccountNumber: text;
+   brandName: opt text;
+   businessName: text;
+   categories: vec text;
+   contactEmail: text;
+   fssaiDocumentUrl: opt text;
+   gstinNumber: opt text;
+   id: principal;
+   ifscCode: text;
+   packagingDetails: opt text;
+   phone: text;
+   registeredAt: int;
+   status: VendorStatus;
+   vendorType: VendorType;
+ };
+type VendorProductView = 
+ record {
+   availableQuantityKg: opt nat;
+   basePrice: nat;
+   category: text;
+   description: text;
+   finalPrice: opt nat;
+   fssaiDocumentUrl: opt text;
+   id: nat;
+   imageUrls: vec text;
+   moq: opt nat;
+   mrp: opt nat;
+   packagingCost: opt nat;
+   pricePerKg: opt nat;
+   productName: text;
+   rejectionReason: opt text;
+   reviewedAt: opt int;
+   status: variant {
+             approved;
+             pending;
+             rejected;
+           };
+   submittedAt: int;
+   supplyPrice: opt nat;
+   taxPercent: opt nat;
+   vendorEmail: text;
+   vendorId: principal;
+   vendorName: text;
+   vendorType: VendorType;
+ };
+type VendorProductInput = 
+ record {
+   availableQuantityKg: opt nat;
+   basePrice: nat;
+   category: text;
+   description: text;
+   fssaiDocumentUrl: opt text;
+   imageUrls: vec text;
+   moq: opt nat;
+   mrp: opt nat;
+   pricePerKg: opt nat;
+   productName: text;
+   supplyPrice: opt nat;
+   vendorName: text;
+   vendorType: VendorType;
+ };
+type VendorOrderSummary = 
+ record {
+   orderId: text;
+   placedAt: int;
+   productId: text;
+   productName: text;
+   quantity: nat;
+   totalPrice: float64;
+ };
 type UserProfilePublic = 
  record {
    addresses: vec Address;
@@ -205,6 +327,7 @@ type HeroBannerInput =
  record {
    ctaSlug: text;
    ctaText: text;
+   durationSeconds: nat;
    imageUrl: text;
    isActive: bool;
    order: nat;
@@ -216,6 +339,7 @@ type HeroBanner =
  record {
    ctaSlug: text;
    ctaText: text;
+   durationSeconds: nat;
    id: HeroBannerId;
    imageUrl: text;
    isActive: bool;
@@ -341,99 +465,167 @@ service : {
   _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
   addMyAddress: (address: Address) -> (UserProfilePublic);
   addToCart: (productId: nat, quantity: nat) -> (CartPublic);
-  adminAddCategory: (name: text, slug: text, description: text, imageUrl:
-   text) -> (variant {
-               err: text;
-               ok: Category;
-             });
-  adminAddFeaturedBlock: (input: FeaturedBlockInput) -> (FeaturedBlock);
-  adminAddHeroBanner: (input: HeroBannerInput) -> (HeroBanner);
-  adminAddProduct: (input: ProductInput) -> (Product);
-  adminAddReview: (reviewerName: text, rating: nat, reviewText: text,
-   productName: text) -> (nat);
-  adminAddSubCategory: (categoryId: CategoryId, name: text, imageUrl:
-   text) -> (variant {
-               err: text;
-               ok: Category;
-             });
-  adminDeleteCategory: (id: CategoryId) -> (variant {
-                                              err: text;
-                                              ok: bool;
-                                            });
-  adminDeleteFeaturedBlock: (id: FeaturedBlockId) ->
-   (variant {
-      err: text;
-      ok: bool;
-    });
-  adminDeleteHeroBanner: (id: HeroBannerId) ->
-   (variant {
-      err: text;
-      ok: bool;
-    });
-  adminDeleteProduct: (id: ProductId) -> (bool);
-  adminDeleteReview: (id: nat) -> (bool);
-  adminDeleteServiceRequest: (id: nat) -> (bool);
-  adminDeleteSubCategory: (categoryId: CategoryId, subCategoryId:
-   SubCategoryId) -> (variant {
-                        err: text;
-                        ok: Category;
-                      });
-  adminGetAllOrders: (limit: nat, offset: nat) -> (vec OrderPublic) query;
-  adminGetCategories: () -> (vec Category) query;
-  adminGetServiceRequests: () -> (vec ServiceRequestPublic) query;
-  adminListFeaturedBlocks: () -> (vec FeaturedBlock) query;
-  adminListHeroBanners: () -> (vec HeroBanner) query;
-  adminLogin: (userId: text, passcode: text) -> (opt text);
-  adminLogout: (token: text) -> ();
-  adminRegisterImageHash: (hash: text) -> (text);
-  adminReorderHeroBanner: (id: HeroBannerId, newOrder: nat) ->
-   (variant {
-      err: text;
-      ok: HeroBanner;
-    });
-  adminSetDiscount: (id: ProductId, discountPercent: nat) -> (opt Product);
-  adminSetUserAdmin: (targetUser: principal, adminStatus: bool) -> (bool);
-  adminUpdateCategory: (id: CategoryId, name: text, slug: text, description:
+  adminAddCategory: (adminToken: text, name: text, slug: text, description:
    text, imageUrl: text) -> (variant {
                                err: text;
                                ok: Category;
                              });
-  adminUpdateFeaturedBlock: (id: FeaturedBlockId, input:
-   FeaturedBlockInput) -> (variant {
-                             err: text;
-                             ok: FeaturedBlock;
-                           });
-  adminUpdateFooterSettings: (tagline: text, copyright: text, aboutContent:
-   text, socialLinks: vec SocialLink) -> (bool);
-  adminUpdateHeroAndHowitworks: (heroTagline: text, heroSubtitle: text,
-   howitworksSteps: vec HowItWorksStep) -> ();
-  adminUpdateHeroBanner: (id: HeroBannerId, input: HeroBannerInput) ->
+  adminAddFeaturedBlock: (adminToken: text, input: FeaturedBlockInput) ->
+   (FeaturedBlock);
+  adminAddHeroBanner: (adminToken: text, input: HeroBannerInput) ->
+   (HeroBanner);
+  adminAddProduct: (adminToken: text, input: ProductInput) -> (Product);
+  adminAddReview: (adminToken: text, reviewerName: text, rating: nat,
+   reviewText: text, productName: text) -> (nat);
+  adminAddSubCategory: (adminToken: text, categoryId: CategoryId, name: 
+   text, imageUrl: text) -> (variant {
+                               err: text;
+                               ok: Category;
+                             });
+  adminApproveVendor: (adminToken: text, vendorId: principal) ->
    (variant {
       err: text;
-      ok: HeroBanner;
+      ok;
     });
-  adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
-   text) -> (opt OrderPublic);
-  adminUpdatePolicyContent: (policyContent: text) -> (bool);
-  adminUpdateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
-  adminUpdateReview: (id: nat, reviewerName: text, rating: nat, reviewText:
-   text, productName: text) -> (bool);
-  adminUpdateServiceRequestStatus: (id: nat, status: ServiceRequestStatus) ->
-   (opt ServiceRequestPublic);
-  adminUpdateServicesAvailability: (available: bool, message: text) -> ();
-  adminUpdateSiteSettings: (logoUrl: opt text, faviconUrl: opt text) ->
-   (record {
-      faviconUrl: opt text;
-      logoUrl: opt text;
+  adminApproveVendorProduct: (adminToken: text, productId: nat, taxPercent:
+   nat, packagingCost: opt nat) ->
+   (variant {
+      err: text;
+      ok: VendorProductView;
     });
-  adminUpdateStock: (id: ProductId, newStock: nat) -> (opt Product);
-  adminUpdateSubCategory: (categoryId: CategoryId, subCategoryId:
-   SubCategoryId, name: text, imageUrl: text) ->
+  adminAssignProductToVendor: (adminToken: text, vendorId: principal,
+   productId: text) -> (variant {
+                          err: text;
+                          ok;
+                        });
+  adminDeleteCategory: (adminToken: text, id: CategoryId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteFeaturedBlock: (adminToken: text, id: FeaturedBlockId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteHeroBanner: (adminToken: text, id: HeroBannerId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteProduct: (adminToken: text, id: ProductId) -> (bool);
+  adminDeleteReview: (adminToken: text, id: nat) -> (bool);
+  adminDeleteServiceRequest: (adminToken: text, id: nat) -> (bool);
+  adminDeleteSubCategory: (adminToken: text, categoryId: CategoryId,
+   subCategoryId: SubCategoryId) -> (variant {
+                                       err: text;
+                                       ok: Category;
+                                     });
+  adminGetAllOrders: (limit: nat, offset: nat) -> (vec OrderPublic) query;
+  adminGetCategories: (adminToken: text) -> (vec Category) query;
+  adminGetServiceRequests: (adminToken: text) ->
+   (vec ServiceRequestPublic) query;
+  adminListFeaturedBlocks: (adminToken: text) -> (vec FeaturedBlock) query;
+  adminListHeroBanners: (adminToken: text) -> (vec HeroBanner) query;
+  adminListVendorProducts: (adminToken: text) ->
+   (vec VendorProductView) query;
+  adminListVendorProductsByVendor: (adminToken: text, vendorId: principal) ->
+   (vec VendorProductView) query;
+  adminListVendors: (status: opt VendorStatus) -> (vec VendorSummary) query;
+  adminLogin: (userId: text, passcode: text) -> (opt text);
+  adminLogout: (token: text) -> ();
+  adminRegisterImageHash: (adminToken: text, hash: text) -> (text);
+  adminRejectVendor: (adminToken: text, vendorId: principal, reason: 
+   text) -> (variant {
+               err: text;
+               ok;
+             });
+  adminRejectVendorProduct: (adminToken: text, productId: nat, reason:
+   text) -> (variant {
+               err: text;
+               ok: VendorProductView;
+             });
+  adminReorderHeroBanner: (adminToken: text, id: HeroBannerId, newOrder:
+   nat) -> (variant {
+              err: text;
+              ok: HeroBanner;
+            });
+  adminRequestOtp: () -> (variant {
+                            err: text;
+                            ok;
+                          });
+  adminSetDiscount: (adminToken: text, id: ProductId, discountPercent:
+   nat) -> (opt Product);
+  adminSetUserAdmin: (targetUser: principal, adminStatus: bool) -> (bool);
+  adminSuspendVendor: (adminToken: text, vendorId: principal) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  adminUnassignProductFromVendor: (adminToken: text, vendorId: principal,
+   productId: text) -> (variant {
+                          err: text;
+                          ok;
+                        });
+  adminUpdateCategory: (adminToken: text, id: CategoryId, name: text, slug:
+   text, description: text, imageUrl: text) ->
    (variant {
       err: text;
       ok: Category;
     });
-  adminUpdateVideoByte: (url: text, enabled: bool, title: text) -> ();
+  adminUpdateFeaturedBlock: (adminToken: text, id: FeaturedBlockId, input:
+   FeaturedBlockInput) -> (variant {
+                             err: text;
+                             ok: FeaturedBlock;
+                           });
+  adminUpdateFooterSettings: (adminToken: text, tagline: text, copyright:
+   text, aboutContent: text, socialLinks: vec SocialLink) -> (bool);
+  adminUpdateHeroAndHowitworks: (adminToken: text, heroTagline: text,
+   heroSubtitle: text, howitworksSteps: vec HowItWorksStep) -> ();
+  adminUpdateHeroBanner: (adminToken: text, id: HeroBannerId, input:
+   HeroBannerInput) -> (variant {
+                          err: text;
+                          ok: HeroBanner;
+                        });
+  adminUpdateOrderStatus: (orderId: OrderId, newStatus: OrderStatus, message:
+   text) -> (opt OrderPublic);
+  adminUpdatePolicyContent: (adminToken: text, policyContent: text) -> (bool);
+  adminUpdateProduct: (adminToken: text, id: ProductId, input:
+   ProductInput) -> (opt Product);
+  adminUpdateReview: (adminToken: text, id: nat, reviewerName: text, rating:
+   nat, reviewText: text, productName: text) -> (bool);
+  adminUpdateServiceRequestStatus: (adminToken: text, id: nat, status:
+   ServiceRequestStatus) -> (opt ServiceRequestPublic);
+  adminUpdateServicesAvailability: (adminToken: text, available: bool,
+   message: text) -> ();
+  adminUpdateSiteSettings: (adminToken: text, logoUrl: opt text, faviconUrl:
+   opt text) -> (record {
+                   faviconUrl: opt text;
+                   logoUrl: opt text;
+                 });
+  adminUpdateStock: (adminToken: text, id: ProductId, newStock: nat) ->
+   (opt Product);
+  adminUpdateSubCategory: (adminToken: text, categoryId: CategoryId,
+   subCategoryId: SubCategoryId, name: text, imageUrl: text) ->
+   (variant {
+      err: text;
+      ok: Category;
+    });
+  adminUpdateVendorProductQuantity: (adminToken: text, productId: nat,
+   newQuantityKg: nat) -> (variant {
+                             err: text;
+                             ok;
+                           });
+  adminUpdateVideoByte: (adminToken: text, url: text, enabled: bool, title:
+   text) -> ();
+  adminVerifyKey: (secretKey: text) -> (variant {
+                                          err: text;
+                                          ok;
+                                        });
+  adminVerifyOtp: (code: text) -> (variant {
+                                     err: text;
+                                     ok: text;
+                                   });
   claimAdminIfFirst: () -> (bool);
   clearMyCart: () -> ();
   createOrder: (input: CreateOrderInput) -> (OrderPublic);
@@ -461,6 +653,11 @@ service : {
   getMyCart: () -> (CartPublic);
   getMyOrders: () -> (vec OrderPublic) query;
   getMyProfile: () -> (UserProfilePublic);
+  getMyVendorOrders: () -> (vec VendorOrderSummary) query;
+  getMyVendorProfile: () -> (variant {
+                               err: text;
+                               ok: VendorProfile;
+                             }) query;
   getOrder: (orderId: OrderId) -> (opt OrderPublic) query;
   getProduct: (id: ProductId) -> (opt Product) query;
   getReviews: () -> (vec CustomerReview) query;
@@ -477,6 +674,8 @@ service : {
       howitworksSteps: vec HowItWorksStep;
       logoUrl: opt text;
     }) query;
+  getVendorForProduct: (productId: text) -> (opt VendorSummary) query;
+  getVendorStatusBySession: (token: text) -> (opt VendorStatus) query;
   getVideoByte: () -> (record {
                          enabled: bool;
                          title: text;
@@ -492,18 +691,62 @@ service : {
   listProducts: (filter: ProductFilter) -> (ProductListResult) query;
   listProductsByCategory: (categoryId: CategoryId, limit: nat, offset:
    nat) -> (ProductListResult) query;
+  processVendorActionToken: (token: text, action:
+   variant {
+     approve;
+     reject;
+   }) -> (variant {
+            err: text;
+            ok: text;
+          });
   razorpayTransform: (input: TransformationInput) ->
    (TransformationOutput) query;
+  registerVendor: (details: VendorRegistration) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
   removeFromCart: (productId: nat) -> (CartPublic);
+  requestOtp: (email: text) -> (variant {
+                                  err: text;
+                                  ok;
+                                });
   searchProducts: (term: text, limit: nat, offset: nat) ->
    (ProductListResult) query;
   submitServiceRequest: (input: CreateServiceRequestInput) ->
    (ServiceRequestPublic);
   updateCartItem: (productId: nat, quantity: nat) -> (CartPublic);
   updateMyProfile: (input: UserProfileInput) -> (UserProfilePublic);
+  vendorGetMyProducts: (sessionToken: text) ->
+   (variant {
+      err: text;
+      ok: vec VendorProductView;
+    });
+  vendorSubmitProduct: (sessionToken: text, input: VendorProductInput) ->
+   (variant {
+      err: text;
+      ok: VendorProductView;
+    });
+  vendorUpdateProductQuantity: (sessionToken: text, productId: nat,
+   newQuantityKg: nat) -> (variant {
+                             err: text;
+                             ok;
+                           });
+  verifyOtp: (email: text, code: text) -> (variant {
+                                             err: text;
+                                             ok: text;
+                                           });
   verifyRazorpayPayment: (razorpayOrderId: text, razorpayPaymentId: text,
    razorpaySignature: text) -> (variant {
                                   err: text;
                                   ok: bool;
                                 });
+  verifyVendorOtp: (email: text, code: text) ->
+   (variant {
+      err: text;
+      ok: record {
+            status: VendorStatus;
+            token: text;
+          };
+    });
 }

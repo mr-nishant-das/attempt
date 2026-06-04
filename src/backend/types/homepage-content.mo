@@ -11,6 +11,7 @@ module {
     ctaSlug : Text;
     order : Nat;
     isActive : Bool;
+    durationSeconds : Nat;
   };
 
   public type HeroBannerInput = {
@@ -21,6 +22,7 @@ module {
     ctaSlug : Text;
     order : Nat;
     isActive : Bool;
+    durationSeconds : Nat;
   };
 
   public type FeaturedBlock = {

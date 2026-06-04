@@ -18,6 +18,13 @@ export function useAuth() {
     }
   }, [identity]);
 
+  const isVendorAuthenticated = () =>
+    Boolean(localStorage.getItem("vendorSessionToken"));
+
+  const vendorLogout = () => {
+    localStorage.removeItem("vendorSessionToken");
+  };
+
   return {
     identity,
     loginStatus,
@@ -27,5 +34,7 @@ export function useAuth() {
     principalText,
     login,
     logout: clear,
+    isVendorAuthenticated,
+    vendorLogout,
   };
 }

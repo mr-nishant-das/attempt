@@ -124,6 +124,14 @@ export interface SiteSettings {
 export const SITE_SETTINGS_KEY = "assamroots_site_settings";
 export const SITE_SETTINGS_EVENT = "assamroots_settings_changed";
 
+export { VendorStatus, VendorType } from "@/backend";
+export type {
+  VendorSummary,
+  VendorProfile,
+  VendorRegistration,
+  VendorOrderSummary,
+} from "@/backend";
+
 // ─── UI Helpers ────────────────────────────────────────────────────────────
 
 /** Convert backend bigint price (paise) to display rupees */

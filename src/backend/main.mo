@@ -20,11 +20,22 @@ import AdminMixin "mixins/admin-session-api";
 import FooterLib "lib/footer";
 import FooterMixin "mixins/footer-api";
 import FooterTypes "types/footer";
-import Migration "migration";
+import Map "mo:core/Map";
+import OtpTypes "types/otp";
+import VendorTypes "types/vendors";
+import OtpMixin "mixins/otp-api";
+import VendorsMixin "mixins/vendors-api";
+import VendorProductsMixin "mixins/vendor-products-api";
+import VendorProductTypes "types/vendor-products";
 
 
 
-(with migration = Migration.run)
+
+
+
+
+
+
 actor {
   // --- Shared state ---
   let categories = List.empty<ProductLib.Category>();
@@ -42,6 +53,25 @@ actor {
   // --- Site settings: declared directly at actor level for migration compatibility ---
   var siteSettings : SiteSettingsLib.SiteSettings = SiteSettingsLib.empty();
 
+  // --- Auth/OTP state ---
+  let otpStore = Map.empty<Text, OtpTypes.OtpRecord>();
+  let adminOtpStore = Map.empty<Text, OtpTypes.OtpRecord>();
+  // --- Vendor session store: token -> { email; expiresAt } ---
+  let vendorSessionStore = Map.empty<Text, { email : Text; expiresAt : Int }>();
+
+  // --- Admin session shared state (passed to all mixins needing token-based auth) ---
+  let adminSessionState = { var token : ?Text = null; var expiry : Int = 0 };
+
+  // --- Vendor state ---
+  let vendors = List.empty<VendorTypes.Vendor>();
+  let vendorApprovalTokens = Map.empty<Text, VendorTypes.VendorApprovalToken>();
+
+  // --- Vendor products state ---
+  let vendorProducts = List.empty<VendorProductTypes.VendorProduct>();
+  let vendorProductState = { var nextId : Nat = 1 };
+  // IDs for vendor-approved catalog products start at 100_000 to avoid collision with admin-added products
+  let catalogVendorProductIdState = { var nextId : Nat = 100_000 };
+
   // --- Seed data on first run ---
   do {
     if (categories.isEmpty()) {
@@ -54,17 +84,20 @@ actor {
   };
 
   // --- Include mixins ---
-  include ProductsMixin(products, categories, users);
+  include ProductsMixin(products, categories, adminSessionState);
   include UsersMixin(users);
   include CartMixin(carts);
   include OrdersMixin(orders, products, users, carts);
-  include ServicesMixin(serviceRequests, users);
-  include HomepageContentMixin(heroBanners, featuredBlocks, users);
+  include ServicesMixin(serviceRequests, adminSessionState);
+  include HomepageContentMixin(heroBanners, featuredBlocks, adminSessionState);
   include MixinObjectStorage();
-  include ImageStorageMixin(users);
+  include ImageStorageMixin(adminSessionState);
   include RazorpayMixin();
-  include AdminMixin(users);
-  include FooterMixin(users, reviews, footerState);
+  include OtpMixin(otpStore, users, adminOtpStore, adminSessionState);
+  include VendorsMixin(vendors, otpStore, vendorApprovalTokens, adminSessionState, vendorSessionStore);
+  include VendorProductsMixin(vendorProducts, vendorProductState, vendors, products, catalogVendorProductIdState, adminSessionState, vendorSessionStore);
+  include AdminMixin(users, adminSessionState);
+  include FooterMixin(reviews, footerState, adminSessionState);
 
   // --- Site settings public API (inline because siteSettings must be a direct actor field) ---
 
@@ -84,21 +117,23 @@ actor {
     };
   };
 
-  public shared ({ caller }) func adminUpdateSiteSettings(
+  public shared func adminUpdateSiteSettings(
+    adminToken : Text,
     logoUrl : ?Text,
     faviconUrl : ?Text,
   ) : async { logoUrl : ?Text; faviconUrl : ?Text } {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (not _checkAdminAuth(adminToken)) Runtime.trap("Unauthorized");
     siteSettings := SiteSettingsLib.update(siteSettings, logoUrl, faviconUrl);
     { logoUrl = siteSettings.logoUrl; faviconUrl = siteSettings.faviconUrl };
   };
 
-  public shared ({ caller }) func adminUpdateHeroAndHowitworks(
+  public shared func adminUpdateHeroAndHowitworks(
+    adminToken : Text,
     heroTagline : Text,
     heroSubtitle : Text,
     howitworksSteps : [SiteSettingsLib.HowItWorksStep],
   ) : async () {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (not _checkAdminAuth(adminToken)) Runtime.trap("Unauthorized");
     siteSettings := SiteSettingsLib.updateHeroAndHowitworks(siteSettings, heroTagline, heroSubtitle, howitworksSteps);
   };
 
@@ -109,11 +144,12 @@ actor {
     };
   };
 
-  public shared ({ caller }) func adminUpdateServicesAvailability(
+  public shared func adminUpdateServicesAvailability(
+    adminToken : Text,
     available : Bool,
     message : Text,
   ) : async () {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (not _checkAdminAuth(adminToken)) Runtime.trap("Unauthorized");
     siteSettings := SiteSettingsLib.updateServicesAvailability(siteSettings, available, message);
   };
 
@@ -125,12 +161,13 @@ actor {
     };
   };
 
-  public shared ({ caller }) func adminUpdateVideoByte(
+  public shared func adminUpdateVideoByte(
+    adminToken : Text,
     url : Text,
     enabled : Bool,
     title : Text,
   ) : async () {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (not _checkAdminAuth(adminToken)) Runtime.trap("Unauthorized");
     siteSettings := SiteSettingsLib.updateVideoByte(siteSettings, url, enabled, title);
   };
 };

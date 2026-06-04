@@ -1,4 +1,4 @@
-// Version: 3.0.0
+// Version: 1.0.0
 type Address__274428118 =
   {
     city : Text;
@@ -39,6 +39,8 @@ type CustomerReview__231716436 =
     reviewText : Text;
     reviewerName : Text
   };
+type Data__80296667<K, V> =
+  {var count : Nat__1040412405; kvs : [var ?(K, V)]};
 type DeliveryAddress__677077764 =
   {
     city : Text;
@@ -80,6 +82,7 @@ type HeroBanner__462156611 =
   {
     ctaSlug : Text;
     ctaText : Text;
+    durationSeconds : Nat;
     id : HeroBannerId__70244176;
     imageUrl : Text;
     isActive : Bool;
@@ -88,28 +91,13 @@ type HeroBanner__462156611 =
     title : Text
   };
 type HowItWorksStep__698088507 = {description : Text; title : Text};
-type Nat__490723111 = Nat__920180692;
+type Internal__41346355<K, V> =
+  {children : [var ?Node__1000929467<K, V>]; data : Data__80296667<K, V>};
+type Leaf__712614010<K, V> = {data : Data__80296667<K, V>};
+type Nat__1040412405 = Nat__920180692;
 type Nat__920180692 = Nat;
-type OldFooterSettings__843040849 =
-  {
-    aboutContent : Text;
-    copyright : Text;
-    socialLinks : [OldSocialLink__623397246];
-    tagline : Text
-  };
-type OldFooterState__386686822 =
-  {var footerSettings : OldFooterSettings__843040849; var nextReviewId : Nat};
-type OldSiteSettings__357140151 =
-  {
-    faviconUrl : ?Text;
-    logoUrl : ?Text;
-    servicesAvailable : ?Bool;
-    servicesUnavailableMessage : ?Text;
-    videoByteEnabled : ?Bool;
-    videoByteTitle : ?Text;
-    videoByteUrl : ?Text
-  };
-type OldSocialLink__623397246 = {enabled : Bool; platform : Text; url : Text};
+type Node__1000929467<K, V> =
+  {#internal : Internal__41346355<K, V>; #leaf : Leaf__712614010<K, V>};
 type OrderId__521176343 = Nat;
 type OrderItem__241319351 =
   {
@@ -146,6 +134,8 @@ type Order__141779993 =
     userId : Principal
   };
 type Order__645163560 = Order__141779993;
+type OtpRecord__574034966 =
+  {expiresAt : Int; hashedCode : Text; var used : Bool};
 type ProductId__947794732 = Nat;
 type Product__1036577220 = Product__151866168;
 type Product__151866168 =
@@ -223,7 +213,62 @@ type UserProfile__277265826 =
     var phone : Text;
     var updatedAt : Int
   };
-actor ({
+type VendorApprovalToken__802206918 =
+  {createdAt : Int; token : Text; var used : Bool; vendorEmail : Text};
+type VendorProduct__358008878 =
+  {
+    var availableQuantityKg : ?Nat;
+    basePrice : Nat;
+    category : Text;
+    description : Text;
+    var finalPrice : ?Nat;
+    fssaiDocumentUrl : ?Text;
+    id : Nat;
+    imageUrls : [Text];
+    moq : ?Nat;
+    mrp : ?Nat;
+    var packagingCost : ?Nat;
+    pricePerKg : ?Nat;
+    productName : Text;
+    var rejectionReason : ?Text;
+    var reviewedAt : ?Int;
+    var status : {#approved; #pending; #rejected};
+    submittedAt : Int;
+    supplyPrice : ?Nat;
+    var taxPercent : ?Nat;
+    vendorEmail : Text;
+    vendorId : Principal;
+    vendorName : Text;
+    vendorType : VendorType__46474417
+  };
+type VendorStatus__605994255 = {#approved; #pending; #rejected; #suspended};
+type VendorType__46474417 = {#brand; #rawMaterial};
+type Vendor__457245463 =
+  {
+    address : Text;
+    var approvedAt : ?Int;
+    var assignedProductIds : [Text];
+    bankAccountNumber : Text;
+    brandName : ?Text;
+    businessName : Text;
+    categories : [Text];
+    contactEmail : Text;
+    fssaiDocumentUrl : ?Text;
+    gstinNumber : ?Text;
+    id : Principal;
+    ifscCode : Text;
+    packagingDetails : ?Text;
+    phone : Text;
+    registeredAt : Int;
+    var status : VendorStatus__605994255;
+    vendorType : VendorType__46474417
+  };
+actor {
+  stable ADMIN_EMAIL : Text;
+  stable ADMIN_NOTIFY_EMAIL : Text;
+  stable ADMIN_NOTIFY_EMAIL_VP : Text;
+  stable ADMIN_OTP_KEY : Text;
+  stable ADMIN_SECRET_KEY : Text;
   stable ADMIN_USER_ID : Text;
   stable B64_TABLE : [Nat8];
   stable PASSCODE_HASH_REF : Nat;
@@ -231,106 +276,40 @@ actor ({
   stable RAZORPAY_KEY_SECRET : Text;
   stable SESSION_DURATION_NS : Int;
   stable SHA256_K : [Nat32];
-  stable var adminSessionExpiry : Int;
-  stable var adminSessionToken : ?Text;
+  stable adminOtpStore :
+    {
+      var root : Node__1000929467<Text, OtpRecord__574034966>;
+      var size : Nat__1040412405
+    };
+  stable adminSessionState : {var expiry : Int; var token : ?Text};
+  stable var adminSessionTokens :
+    {var root : Node__1000929467<Text, Int>; var size : Nat__1040412405};
   stable carts :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?Cart__839558991]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
+  stable catalogVendorProductIdState : {var nextId : Nat};
   stable categories :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?Category__738961406]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable featuredBlocks :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?FeaturedBlock__551827969]];
-      var elementIndex : Nat__490723111
-    };
-  in footerState : OldFooterState__386686822;
-  stable heroBanners :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?HeroBanner__1008058493]];
-      var elementIndex : Nat__490723111
-    };
-  stable var nextCategoryId : Nat;
-  stable var nextFeaturedBlockId : Nat;
-  stable var nextHeroBannerId : Nat;
-  stable var nextOrderId : Nat;
-  stable var nextProductId : Nat;
-  stable var nextServiceRequestId : Nat;
-  stable var nextSubCategoryId : Nat;
-  stable orders :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?Order__645163560]];
-      var elementIndex : Nat__490723111
-    };
-  stable products :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?Product__1036577220]];
-      var elementIndex : Nat__490723111
-    };
-  stable reviews :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?CustomerReview__231716436]];
-      var elementIndex : Nat__490723111
-    };
-  stable serviceRequests :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?ServiceRequest__43766594]];
-      var elementIndex : Nat__490723111
-    };
-  in var siteSettings : OldSiteSettings__357140151;
-  stable users :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?UserProfile__104081004]];
-      var elementIndex : Nat__490723111
-    }
-}, {
-  stable ADMIN_USER_ID : Text;
-  stable B64_TABLE : [Nat8];
-  stable PASSCODE_HASH_REF : Nat;
-  stable RAZORPAY_KEY_ID : Text;
-  stable RAZORPAY_KEY_SECRET : Text;
-  stable SESSION_DURATION_NS : Int;
-  stable SHA256_K : [Nat32];
-  stable var adminSessionExpiry : Int;
-  stable var adminSessionToken : ?Text;
-  stable carts :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?Cart__839558991]];
-      var elementIndex : Nat__490723111
-    };
-  stable categories :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?Category__738961406]];
-      var elementIndex : Nat__490723111
-    };
-  stable featuredBlocks :
-    {
-      var blockIndex : Nat__490723111;
-      var blocks : [var [var ?FeaturedBlock__551827969]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable footerState :
     {var footerSettings : FooterSettings__753066405; var nextReviewId : Nat};
   stable heroBanners :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?HeroBanner__1008058493]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable var nextCategoryId : Nat;
   stable var nextFeaturedBlockId : Nat;
@@ -341,27 +320,32 @@ actor ({
   stable var nextSubCategoryId : Nat;
   stable orders :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?Order__645163560]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
+    };
+  stable otpStore :
+    {
+      var root : Node__1000929467<Text, OtpRecord__574034966>;
+      var size : Nat__1040412405
     };
   stable products :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?Product__1036577220]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable reviews :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?CustomerReview__231716436]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable serviceRequests :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?ServiceRequest__43766594]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
   stable var siteSettings :
     {
@@ -376,10 +360,38 @@ actor ({
       videoByteTitle : ?Text;
       videoByteUrl : ?Text
     };
+  stable var userSessionTokens :
+    {
+      var root : Node__1000929467<Text, {email : Text; expiresAt : Int}>;
+      var size : Nat__1040412405
+    };
   stable users :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?UserProfile__104081004]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
+    };
+  stable vendorApprovalTokens :
+    {
+      var root : Node__1000929467<Text, VendorApprovalToken__802206918>;
+      var size : Nat__1040412405
+    };
+  stable vendorProductState : {var nextId : Nat};
+  stable vendorProducts :
+    {
+      var blockIndex : Nat__1040412405;
+      var blocks : [var [var ?VendorProduct__358008878]];
+      var elementIndex : Nat__1040412405
+    };
+  stable vendorSessionStore :
+    {
+      var root : Node__1000929467<Text, {email : Text; expiresAt : Int}>;
+      var size : Nat__1040412405
+    };
+  stable vendors :
+    {
+      var blockIndex : Nat__1040412405;
+      var blocks : [var [var ?Vendor__457245463]];
+      var elementIndex : Nat__1040412405
     }
-}) ;
+};

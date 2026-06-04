@@ -1,3 +1,4 @@
+import { createActor } from "@/backend";
 import type { Product } from "@/backend";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
@@ -7,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/hooks/useCart";
 import { useProduct, useProductsByCategory } from "@/hooks/useQueries";
 import { discountedPrice, formatPrice, ratingToFloat } from "@/types";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Link, useParams } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -463,8 +465,21 @@ export default function ProductDetailPage() {
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string>
   >({});
+  const [vendorName, setVendorName] = useState<string | null>(null);
 
   const { data: product, isLoading } = useProduct(id);
+  const { actor, isFetching: actorFetching } = useActor(createActor);
+
+  // Fetch vendor attribution
+  useEffect(() => {
+    if (!actor || actorFetching || !id) return;
+    actor
+      .getVendorForProduct(id)
+      .then((result) => {
+        if (result) setVendorName(result.businessName);
+      })
+      .catch(() => {});
+  }, [actor, actorFetching, id]);
 
   // Reset image index when id changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset
@@ -685,6 +700,13 @@ export default function ProductDetailPage() {
               </>
             )}
           </div>
+
+          {vendorName && (
+            <p className="text-sm text-muted-foreground">
+              Supplied by{" "}
+              <span className="font-medium text-foreground">{vendorName}</span>
+            </p>
+          )}
 
           {outOfStock ? (
             <div

@@ -108,6 +108,7 @@ export interface HeroBanner {
   'imageUrl' : string,
   'ctaSlug' : string,
   'ctaText' : string,
+  'durationSeconds' : bigint,
   'subtitle' : string,
 }
 export type HeroBannerId = bigint;
@@ -118,6 +119,7 @@ export interface HeroBannerInput {
   'imageUrl' : string,
   'ctaSlug' : string,
   'ctaText' : string,
+  'durationSeconds' : bigint,
   'subtitle' : string,
 }
 export interface HowItWorksStep { 'title' : string, 'description' : string }
@@ -272,6 +274,114 @@ export interface UserProfilePublic {
   'isAdmin' : boolean,
   'phone' : string,
 }
+export interface VendorOrderSummary {
+  'productId' : string,
+  'productName' : string,
+  'orderId' : string,
+  'placedAt' : bigint,
+  'quantity' : bigint,
+  'totalPrice' : number,
+}
+export interface VendorProductInput {
+  'moq' : [] | [bigint],
+  'mrp' : [] | [bigint],
+  'imageUrls' : Array<string>,
+  'fssaiDocumentUrl' : [] | [string],
+  'pricePerKg' : [] | [bigint],
+  'supplyPrice' : [] | [bigint],
+  'description' : string,
+  'productName' : string,
+  'availableQuantityKg' : [] | [bigint],
+  'category' : string,
+  'basePrice' : bigint,
+  'vendorName' : string,
+  'vendorType' : VendorType,
+}
+export interface VendorProductView {
+  'id' : bigint,
+  'moq' : [] | [bigint],
+  'mrp' : [] | [bigint],
+  'finalPrice' : [] | [bigint],
+  'status' : { 'pending' : null } |
+    { 'approved' : null } |
+    { 'rejected' : null },
+  'packagingCost' : [] | [bigint],
+  'taxPercent' : [] | [bigint],
+  'imageUrls' : Array<string>,
+  'fssaiDocumentUrl' : [] | [string],
+  'pricePerKg' : [] | [bigint],
+  'rejectionReason' : [] | [string],
+  'supplyPrice' : [] | [bigint],
+  'submittedAt' : bigint,
+  'description' : string,
+  'productName' : string,
+  'reviewedAt' : [] | [bigint],
+  'availableQuantityKg' : [] | [bigint],
+  'vendorId' : Principal,
+  'category' : string,
+  'basePrice' : bigint,
+  'vendorEmail' : string,
+  'vendorName' : string,
+  'vendorType' : VendorType,
+}
+export interface VendorProfile {
+  'id' : Principal,
+  'bankAccountNumber' : string,
+  'categories' : Array<string>,
+  'status' : VendorStatus,
+  'assignedProductIds' : Array<string>,
+  'ifscCode' : string,
+  'fssaiDocumentUrl' : [] | [string],
+  'approvedAt' : [] | [bigint],
+  'businessName' : string,
+  'address' : string,
+  'contactEmail' : string,
+  'brandName' : [] | [string],
+  'phone' : string,
+  'packagingDetails' : [] | [string],
+  'registeredAt' : bigint,
+  'vendorType' : VendorType,
+  'gstinNumber' : [] | [string],
+}
+export interface VendorRegistration {
+  'bankAccountNumber' : string,
+  'categories' : Array<string>,
+  'ifscCode' : string,
+  'fssaiDocumentUrl' : [] | [string],
+  'businessName' : string,
+  'address' : string,
+  'contactEmail' : string,
+  'brandName' : [] | [string],
+  'phone' : string,
+  'packagingDetails' : [] | [string],
+  'vendorType' : VendorType,
+  'gstinNumber' : [] | [string],
+}
+export type VendorStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null } |
+  { 'suspended' : null };
+export interface VendorSummary {
+  'id' : Principal,
+  'bankAccountNumber' : string,
+  'categories' : Array<string>,
+  'status' : VendorStatus,
+  'assignedProductIds' : Array<string>,
+  'ifscCode' : string,
+  'fssaiDocumentUrl' : [] | [string],
+  'approvedAt' : [] | [bigint],
+  'businessName' : string,
+  'address' : string,
+  'contactEmail' : string,
+  'brandName' : [] | [string],
+  'phone' : string,
+  'packagingDetails' : [] | [string],
+  'registeredAt' : bigint,
+  'vendorType' : VendorType,
+  'gstinNumber' : [] | [string],
+}
+export type VendorType = { 'rawMaterial' : null } |
+  { 'brand' : null };
 export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -311,77 +421,128 @@ export interface _SERVICE {
   'addMyAddress' : ActorMethod<[Address], UserProfilePublic>,
   'addToCart' : ActorMethod<[bigint, bigint], CartPublic>,
   'adminAddCategory' : ActorMethod<
-    [string, string, string, string],
+    [string, string, string, string, string],
     { 'ok' : Category } |
       { 'err' : string }
   >,
-  'adminAddFeaturedBlock' : ActorMethod<[FeaturedBlockInput], FeaturedBlock>,
-  'adminAddHeroBanner' : ActorMethod<[HeroBannerInput], HeroBanner>,
-  'adminAddProduct' : ActorMethod<[ProductInput], Product>,
-  'adminAddReview' : ActorMethod<[string, bigint, string, string], bigint>,
+  'adminAddFeaturedBlock' : ActorMethod<
+    [string, FeaturedBlockInput],
+    FeaturedBlock
+  >,
+  'adminAddHeroBanner' : ActorMethod<[string, HeroBannerInput], HeroBanner>,
+  'adminAddProduct' : ActorMethod<[string, ProductInput], Product>,
+  'adminAddReview' : ActorMethod<
+    [string, string, bigint, string, string],
+    bigint
+  >,
   'adminAddSubCategory' : ActorMethod<
-    [CategoryId, string, string],
+    [string, CategoryId, string, string],
     { 'ok' : Category } |
+      { 'err' : string }
+  >,
+  'adminApproveVendor' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'adminApproveVendorProduct' : ActorMethod<
+    [string, bigint, bigint, [] | [bigint]],
+    { 'ok' : VendorProductView } |
+      { 'err' : string }
+  >,
+  'adminAssignProductToVendor' : ActorMethod<
+    [string, Principal, string],
+    { 'ok' : null } |
       { 'err' : string }
   >,
   'adminDeleteCategory' : ActorMethod<
-    [CategoryId],
+    [string, CategoryId],
     { 'ok' : boolean } |
       { 'err' : string }
   >,
   'adminDeleteFeaturedBlock' : ActorMethod<
-    [FeaturedBlockId],
+    [string, FeaturedBlockId],
     { 'ok' : boolean } |
       { 'err' : string }
   >,
   'adminDeleteHeroBanner' : ActorMethod<
-    [HeroBannerId],
+    [string, HeroBannerId],
     { 'ok' : boolean } |
       { 'err' : string }
   >,
-  'adminDeleteProduct' : ActorMethod<[ProductId], boolean>,
-  'adminDeleteReview' : ActorMethod<[bigint], boolean>,
-  'adminDeleteServiceRequest' : ActorMethod<[bigint], boolean>,
+  'adminDeleteProduct' : ActorMethod<[string, ProductId], boolean>,
+  'adminDeleteReview' : ActorMethod<[string, bigint], boolean>,
+  'adminDeleteServiceRequest' : ActorMethod<[string, bigint], boolean>,
   'adminDeleteSubCategory' : ActorMethod<
-    [CategoryId, SubCategoryId],
+    [string, CategoryId, SubCategoryId],
     { 'ok' : Category } |
       { 'err' : string }
   >,
   'adminGetAllOrders' : ActorMethod<[bigint, bigint], Array<OrderPublic>>,
-  'adminGetCategories' : ActorMethod<[], Array<Category>>,
-  'adminGetServiceRequests' : ActorMethod<[], Array<ServiceRequestPublic>>,
-  'adminListFeaturedBlocks' : ActorMethod<[], Array<FeaturedBlock>>,
-  'adminListHeroBanners' : ActorMethod<[], Array<HeroBanner>>,
+  'adminGetCategories' : ActorMethod<[string], Array<Category>>,
+  'adminGetServiceRequests' : ActorMethod<
+    [string],
+    Array<ServiceRequestPublic>
+  >,
+  'adminListFeaturedBlocks' : ActorMethod<[string], Array<FeaturedBlock>>,
+  'adminListHeroBanners' : ActorMethod<[string], Array<HeroBanner>>,
+  'adminListVendorProducts' : ActorMethod<[string], Array<VendorProductView>>,
+  'adminListVendorProductsByVendor' : ActorMethod<
+    [string, Principal],
+    Array<VendorProductView>
+  >,
+  'adminListVendors' : ActorMethod<[[] | [VendorStatus]], Array<VendorSummary>>,
   'adminLogin' : ActorMethod<[string, string], [] | [string]>,
   'adminLogout' : ActorMethod<[string], undefined>,
-  'adminRegisterImageHash' : ActorMethod<[string], string>,
+  'adminRegisterImageHash' : ActorMethod<[string, string], string>,
+  'adminRejectVendor' : ActorMethod<
+    [string, Principal, string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'adminRejectVendorProduct' : ActorMethod<
+    [string, bigint, string],
+    { 'ok' : VendorProductView } |
+      { 'err' : string }
+  >,
   'adminReorderHeroBanner' : ActorMethod<
-    [HeroBannerId, bigint],
+    [string, HeroBannerId, bigint],
     { 'ok' : HeroBanner } |
       { 'err' : string }
   >,
-  'adminSetDiscount' : ActorMethod<[ProductId, bigint], [] | [Product]>,
+  'adminRequestOtp' : ActorMethod<[], { 'ok' : null } | { 'err' : string }>,
+  'adminSetDiscount' : ActorMethod<[string, ProductId, bigint], [] | [Product]>,
   'adminSetUserAdmin' : ActorMethod<[Principal, boolean], boolean>,
+  'adminSuspendVendor' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'adminUnassignProductFromVendor' : ActorMethod<
+    [string, Principal, string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
   'adminUpdateCategory' : ActorMethod<
-    [CategoryId, string, string, string, string],
+    [string, CategoryId, string, string, string, string],
     { 'ok' : Category } |
       { 'err' : string }
   >,
   'adminUpdateFeaturedBlock' : ActorMethod<
-    [FeaturedBlockId, FeaturedBlockInput],
+    [string, FeaturedBlockId, FeaturedBlockInput],
     { 'ok' : FeaturedBlock } |
       { 'err' : string }
   >,
   'adminUpdateFooterSettings' : ActorMethod<
-    [string, string, string, Array<SocialLink>],
+    [string, string, string, string, Array<SocialLink>],
     boolean
   >,
   'adminUpdateHeroAndHowitworks' : ActorMethod<
-    [string, string, Array<HowItWorksStep>],
+    [string, string, string, Array<HowItWorksStep>],
     undefined
   >,
   'adminUpdateHeroBanner' : ActorMethod<
-    [HeroBannerId, HeroBannerInput],
+    [string, HeroBannerId, HeroBannerInput],
     { 'ok' : HeroBanner } |
       { 'err' : string }
   >,
@@ -389,28 +550,52 @@ export interface _SERVICE {
     [OrderId, OrderStatus, string],
     [] | [OrderPublic]
   >,
-  'adminUpdatePolicyContent' : ActorMethod<[string], boolean>,
-  'adminUpdateProduct' : ActorMethod<[ProductId, ProductInput], [] | [Product]>,
+  'adminUpdatePolicyContent' : ActorMethod<[string, string], boolean>,
+  'adminUpdateProduct' : ActorMethod<
+    [string, ProductId, ProductInput],
+    [] | [Product]
+  >,
   'adminUpdateReview' : ActorMethod<
-    [bigint, string, bigint, string, string],
+    [string, bigint, string, bigint, string, string],
     boolean
   >,
   'adminUpdateServiceRequestStatus' : ActorMethod<
-    [bigint, ServiceRequestStatus],
+    [string, bigint, ServiceRequestStatus],
     [] | [ServiceRequestPublic]
   >,
-  'adminUpdateServicesAvailability' : ActorMethod<[boolean, string], undefined>,
+  'adminUpdateServicesAvailability' : ActorMethod<
+    [string, boolean, string],
+    undefined
+  >,
   'adminUpdateSiteSettings' : ActorMethod<
-    [[] | [string], [] | [string]],
+    [string, [] | [string], [] | [string]],
     { 'logoUrl' : [] | [string], 'faviconUrl' : [] | [string] }
   >,
-  'adminUpdateStock' : ActorMethod<[ProductId, bigint], [] | [Product]>,
+  'adminUpdateStock' : ActorMethod<[string, ProductId, bigint], [] | [Product]>,
   'adminUpdateSubCategory' : ActorMethod<
-    [CategoryId, SubCategoryId, string, string],
+    [string, CategoryId, SubCategoryId, string, string],
     { 'ok' : Category } |
       { 'err' : string }
   >,
-  'adminUpdateVideoByte' : ActorMethod<[string, boolean, string], undefined>,
+  'adminUpdateVendorProductQuantity' : ActorMethod<
+    [string, bigint, bigint],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'adminUpdateVideoByte' : ActorMethod<
+    [string, string, boolean, string],
+    undefined
+  >,
+  'adminVerifyKey' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'adminVerifyOtp' : ActorMethod<
+    [string],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'claimAdminIfFirst' : ActorMethod<[], boolean>,
   'clearMyCart' : ActorMethod<[], undefined>,
   'createOrder' : ActorMethod<[CreateOrderInput], OrderPublic>,
@@ -436,6 +621,12 @@ export interface _SERVICE {
   'getMyCart' : ActorMethod<[], CartPublic>,
   'getMyOrders' : ActorMethod<[], Array<OrderPublic>>,
   'getMyProfile' : ActorMethod<[], UserProfilePublic>,
+  'getMyVendorOrders' : ActorMethod<[], Array<VendorOrderSummary>>,
+  'getMyVendorProfile' : ActorMethod<
+    [],
+    { 'ok' : VendorProfile } |
+      { 'err' : string }
+  >,
   'getOrder' : ActorMethod<[OrderId], [] | [OrderPublic]>,
   'getProduct' : ActorMethod<[ProductId], [] | [Product]>,
   'getReviews' : ActorMethod<[], Array<CustomerReview>>,
@@ -453,6 +644,8 @@ export interface _SERVICE {
       'heroTagline' : string,
     }
   >,
+  'getVendorForProduct' : ActorMethod<[string], [] | [VendorSummary]>,
+  'getVendorStatusBySession' : ActorMethod<[string], [] | [VendorStatus]>,
   'getVideoByte' : ActorMethod<
     [],
     { 'url' : string, 'title' : string, 'enabled' : boolean }
@@ -469,11 +662,22 @@ export interface _SERVICE {
     [CategoryId, bigint, bigint],
     ProductListResult
   >,
+  'processVendorActionToken' : ActorMethod<
+    [string, { 'reject' : null } | { 'approve' : null }],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'razorpayTransform' : ActorMethod<
     [TransformationInput],
     TransformationOutput
   >,
+  'registerVendor' : ActorMethod<
+    [VendorRegistration],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'removeFromCart' : ActorMethod<[bigint], CartPublic>,
+  'requestOtp' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
   'searchProducts' : ActorMethod<[string, bigint, bigint], ProductListResult>,
   'submitServiceRequest' : ActorMethod<
     [CreateServiceRequestInput],
@@ -481,9 +685,34 @@ export interface _SERVICE {
   >,
   'updateCartItem' : ActorMethod<[bigint, bigint], CartPublic>,
   'updateMyProfile' : ActorMethod<[UserProfileInput], UserProfilePublic>,
+  'vendorGetMyProducts' : ActorMethod<
+    [string],
+    { 'ok' : Array<VendorProductView> } |
+      { 'err' : string }
+  >,
+  'vendorSubmitProduct' : ActorMethod<
+    [string, VendorProductInput],
+    { 'ok' : VendorProductView } |
+      { 'err' : string }
+  >,
+  'vendorUpdateProductQuantity' : ActorMethod<
+    [string, bigint, bigint],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'verifyOtp' : ActorMethod<
+    [string, string],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'verifyRazorpayPayment' : ActorMethod<
     [string, string, string],
     { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'verifyVendorOtp' : ActorMethod<
+    [string, string],
+    { 'ok' : { 'status' : VendorStatus, 'token' : string } } |
       { 'err' : string }
   >,
 }

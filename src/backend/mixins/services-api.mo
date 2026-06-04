@@ -1,14 +1,22 @@
 import ServicesLib "../lib/services";
-import UserLib "../lib/users";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
+import Time "mo:core/Time";
 
 mixin (
   serviceRequests : List.List<ServicesLib.ServiceRequest>,
-  users : List.List<UserLib.UserProfile>,
+  adminSessionState : { var token : ?Text; var expiry : Int },
 ) {
 
   var nextServiceRequestId : Nat = 1;
+
+  func _adminAuthSvc(token : Text) : Bool {
+    switch (adminSessionState.token) {
+      case (?t) Text.equal(t, token) and Time.now() < adminSessionState.expiry;
+      case null false;
+    };
+  };
 
   public shared ({ caller }) func submitServiceRequest(
     input : ServicesLib.CreateServiceRequestInput,
@@ -19,21 +27,22 @@ mixin (
     ServicesLib.toPublic(req);
   };
 
-  public query ({ caller }) func adminGetServiceRequests() : async [ServicesLib.ServiceRequestPublic] {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public query func adminGetServiceRequests(adminToken : Text) : async [ServicesLib.ServiceRequestPublic] {
+    if (not _adminAuthSvc(adminToken)) Runtime.trap("Unauthorized");
     ServicesLib.getAllRequests(serviceRequests);
   };
 
-  public shared ({ caller }) func adminUpdateServiceRequestStatus(
+  public shared func adminUpdateServiceRequestStatus(
+    adminToken : Text,
     id : Nat,
     status : ServicesLib.ServiceRequestStatus,
   ) : async ?ServicesLib.ServiceRequestPublic {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+    if (not _adminAuthSvc(adminToken)) Runtime.trap("Unauthorized");
     ServicesLib.updateStatus(serviceRequests, id, status);
   };
 
-  public shared ({ caller }) func adminDeleteServiceRequest(id : Nat) : async Bool {
-    if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized");
+  public shared func adminDeleteServiceRequest(adminToken : Text, id : Nat) : async Bool {
+    if (not _adminAuthSvc(adminToken)) Runtime.trap("Unauthorized");
     ServicesLib.deleteRequest(serviceRequests, id);
   };
 
